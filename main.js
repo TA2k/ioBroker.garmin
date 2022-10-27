@@ -78,7 +78,7 @@ class Garmin extends utils.Adapter {
     }
     this.refreshTokenInterval = setInterval(() => {
       this.refreshToken();
-    }, this.session.expires_in * 1000);
+    }, this.session.expires_in || 3600 * 1000);
   }
   async login() {
     const form = await this.requestClient({
@@ -119,8 +119,19 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
+
         this.setState("cookie", JSON.stringify(this.cookieJar.toJSON()), true);
+
         this.setState("info.connection", true, true);
+        try {
+          this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
+          this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
+          this.json2iob.parse("userpreferences", this.userpreferences);
+          this.json2iob.parse("social_profile", this.social_media);
+        } catch (error) {
+          this.log.error(error);
+        }
+
         return true;
       })
       .catch((error) => {
