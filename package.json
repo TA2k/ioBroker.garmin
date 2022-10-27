@@ -17,7 +17,7 @@
     "url": "https://github.com/TA2k/ioBroker.garmin.git"
   },
   "engines": {
-    "node": ">= 18"
+    "node": ">= 14"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^2.6.7",
