@@ -17,21 +17,17 @@ Adapter for Garmin Connect
 
 # Loginablauf
 
-Die Home net Mail und Passwort eingeben.
-
-## Steuern
-
-Werte können direkt unter homenet.0.id.status.xxx.value gesetzt werden
+Die garmin connect Mail und Passwort eingeben.
 
 ## Diskussion und Fragen
 
-<https://forum.iobroker.net/topic/59365/test-adapter-bauknecht-home-net>
+<https://forum.iobroker.net/topic/59413/test-adapter-garmin>
 
 ## Changelog
 
 ### 0.0.1
 
--   (TA2k) initial release
+- (TA2k) initial release
 
 ## License
 
