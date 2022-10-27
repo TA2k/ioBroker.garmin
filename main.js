@@ -7,7 +7,7 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require("@iobroker/adapter-core");
-const axios = require("axios").default;
+const axios = require("axios");
 const Json2iob = require("./lib/json2iob");
 const tough = require("tough-cookie");
 const qs = require("qs");
@@ -25,6 +25,9 @@ class Garmin extends utils.Adapter {
       ...options,
       name: "garmin",
     });
+    this.on("ready", this.onReady.bind(this));
+    this.on("stateChange", this.onStateChange.bind(this));
+    this.on("unload", this.onUnload.bind(this));
     this.deviceArray = [];
 
     this.json2iob = new Json2iob(this);
@@ -52,6 +55,10 @@ class Garmin extends utils.Adapter {
     if (!this.config.username || !this.config.password) {
       this.log.error("Please set username and password in the instance settings");
       return;
+    }
+    const cookieState = await this.getStateAsync("cookie");
+    if (cookieState && cookieState.val) {
+      this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
 
     this.updateInterval = null;
@@ -99,28 +106,28 @@ class Garmin extends utils.Adapter {
       headers: {
         Host: "sso.garmin.com",
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "content-type": "application/x-www-form-urlencoded",
         origin: "https://sso.garmin.com",
         "accept-language": "en-GB,en;q=0.9",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
-        referer:
-          "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
+        "content-type": "application/x-www-form-urlencoded",
       },
       data: qs.stringify({
         username: this.config.username,
         password: this.config.password,
-        embed: "false",
         csrf: form.csrf,
         rememberme: "on",
       }),
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
-
+        this.setState("cookie", JSON.stringify(this.cookieJar.toJSON()), true);
         this.setState("info.connection", true, true);
+        return true;
       })
       .catch((error) => {
+        if (error.response && error.response.status === 403) {
+          this.log.error("Please update your Node version to Node 18 or higher");
+          return;
+        }
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
