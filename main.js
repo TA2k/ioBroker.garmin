@@ -58,7 +58,7 @@ class Garmin extends utils.Adapter {
     }
     const cookieState = await this.getStateAsync("cookie");
     if (cookieState && cookieState.val) {
-      this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
+      //this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
 
     this.updateInterval = null;
@@ -78,7 +78,7 @@ class Garmin extends utils.Adapter {
     }
     this.refreshTokenInterval = setInterval(() => {
       this.refreshToken();
-    }, this.session.expires_in || 3600 * 1000);
+    }, (this.session.expires_in || 3600) * 1000);
   }
   async login() {
     const form = await this.requestClient({
@@ -105,7 +105,7 @@ class Garmin extends utils.Adapter {
     let data = {
       username: this.config.username,
       password: this.config.password,
-      csrf: form.csrf,
+      _csrf: form._csrf,
       embed: "false",
       rememberme: "on",
     };
@@ -150,6 +150,10 @@ class Garmin extends utils.Adapter {
         return body.split("ticket=")[1].split('";')[0];
       })
       .catch((error) => {
+        if (error.response && error.response.status === 403) {
+          this.log.error("Please update node to version 18 or higher");
+          return;
+        }
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
         if (this.config.mfa) {
@@ -162,27 +166,8 @@ class Garmin extends utils.Adapter {
           });
         }
       });
-    await this.requestClient({
-      method: "post",
-      url: "https://connect.garmin.com/modern/di-oauth/exchange",
-      headers: {
-        accept: "application/json, text/plain, */*",
-        "x-app-ver": "4.60.2.0",
-        NK: "NT",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
-        "accept-language": "en-GB,en;q=0.9",
-      },
-    })
-      .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-        this.session = res.data;
-      })
-      .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
-      });
-    return await this.requestClient({
+
+    const result = await this.requestClient({
       method: "get",
       url: "https://connect.garmin.com/modern/?ticket=" + ticket,
       headers: {
@@ -192,7 +177,7 @@ class Garmin extends utils.Adapter {
         "accept-language": "en-GB,en;q=0.9",
       },
     })
-      .then((res) => {
+      .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
 
         this.setState("cookie", JSON.stringify(this.cookieJar.toJSON()), true);
@@ -207,13 +192,31 @@ class Garmin extends utils.Adapter {
           this.log.error(error);
         }
         this.setState("info.connection", true, true);
-
+        await this.requestClient({
+          method: "post",
+          url: "https://connect.garmin.com/modern/di-oauth/exchange",
+          headers: {
+            accept: "application/json, text/plain, */*",
+            "x-app-ver": "4.60.2.0",
+            NK: "NT",
+          },
+        })
+          .then((res) => {
+            this.log.debug(JSON.stringify(res.data));
+            this.session = res.data;
+          })
+          .catch((error) => {
+            this.log.error(error);
+            error.response && this.log.error(JSON.stringify(error.response.data));
+          });
         return true;
       })
       .catch((error) => {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
+
+    return result;
   }
 
   async getDeviceList() {
@@ -226,7 +229,7 @@ class Garmin extends utils.Adapter {
         "accept-language": "en-GB,en;q=0.9",
       },
     })
-      .then(async (res) => {
+      .then((res) => {
         this.log.debug(JSON.stringify(res.data));
         if (res.data.devices) {
           this.log.info(`Found ${res.data.devices.length} devices`);
@@ -244,66 +247,110 @@ class Garmin extends utils.Adapter {
   async updateDevices() {
     const statusArray = [
       {
-        path: "status",
-        url: "",
-        desc: "Status of the device",
+        path: "usersummary",
+        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/daily",
+        desc: "User Summary Daily",
+      },
+      {
+        path: "maxmet",
+        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/maxmet/daily",
+        desc: "Max Metrics Daily",
+      },
+      {
+        path: "hydration",
+        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/hydration/daily",
+        desc: "Hydration Daily",
+      },
+      {
+        path: "personalrecords",
+        url: "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs",
+        desc: "Personal Records",
+      },
+      {
+        path: "adhocchallenge",
+        url: "https://connect.garmin.com/modern/proxy/adhocchallenge-service/adHocChallenge/historical",
+        desc: "Adhoc Challenge",
+      },
+      {
+        path: "dailysleep",
+        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailySleepData",
+        desc: "Daily Sleep",
+      },
+      {
+        path: "dailystress",
+        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailyStress",
+        desc: "Daily Stress",
+      },
+      {
+        path: "heartrate",
+        url: "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily",
+        desc: "Resting Heartrate",
+      },
+      {
+        path: "trainingstatus",
+        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/trainingstatus/aggregated",
+        desc: "Training Status",
+      },
+      {
+        path: "activities",
+        url: "https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities",
+        desc: "Activities",
       },
     ];
-    for (const id of this.deviceArray) {
-      for (const element of statusArray) {
-        const url = element.url.replace("$id", id);
 
-        await this.requestClient({
-          method: element.method || "get",
-          url: url,
+    for (const element of statusArray) {
+      // const url = element.url.replace("$id", id);
+
+      await this.requestClient({
+        method: element.method || "get",
+        url: element.url,
+      })
+        .then(async (res) => {
+          this.log.debug(JSON.stringify(res.data));
+          if (!res.data) {
+            return;
+          }
+          const data = res.data;
+
+          const forceIndex = true;
+          const preferedArrayName = null;
+
+          this.json2iob.parse(element.path, data, {
+            forceIndex: forceIndex,
+            write: true,
+            preferedArrayName: preferedArrayName,
+            channelName: element.desc,
+          });
+          // await this.setObjectNotExistsAsync(element.path + ".json", {
+          //   type: "state",
+          //   common: {
+          //     name: "Raw JSON",
+          //     write: false,
+          //     read: true,
+          //     type: "string",
+          //     role: "json",
+          //   },
+          //   native: {},
+          // });
+          // this.setState(element.path + ".json", JSON.stringify(data), true);
         })
-          .then(async (res) => {
-            this.log.debug(JSON.stringify(res.data));
-            if (!res.data) {
+        .catch((error) => {
+          if (error.response) {
+            if (error.response.status === 401) {
+              error.response && this.log.debug(JSON.stringify(error.response.data));
+              this.log.info(element.path + " receive 401 error. Refresh Token in 60 seconds");
+              this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
+              this.refreshTokenTimeout = setTimeout(() => {
+                this.refreshToken();
+              }, 1000 * 60);
+
               return;
             }
-            const data = res.data;
-
-            const forceIndex = true;
-            const preferedArrayName = null;
-
-            this.json2iob.parse(id + "." + element.path, data, {
-              forceIndex: forceIndex,
-              write: true,
-              preferedArrayName: preferedArrayName,
-              channelName: element.desc,
-            });
-            // await this.setObjectNotExistsAsync(element.path + ".json", {
-            //   type: "state",
-            //   common: {
-            //     name: "Raw JSON",
-            //     write: false,
-            //     read: true,
-            //     type: "string",
-            //     role: "json",
-            //   },
-            //   native: {},
-            // });
-            // this.setState(element.path + ".json", JSON.stringify(data), true);
-          })
-          .catch((error) => {
-            if (error.response) {
-              if (error.response.status === 401) {
-                error.response && this.log.debug(JSON.stringify(error.response.data));
-                this.log.info(element.path + " receive 401 error. Refresh Token in 60 seconds");
-                this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-                this.refreshTokenTimeout = setTimeout(() => {
-                  this.refreshToken();
-                }, 1000 * 60);
-
-                return;
-              }
-            }
-            this.log.error(element.url);
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-      }
+          }
+          this.log.error(element.url);
+          this.log.error(error);
+          error.response && this.log.error(JSON.stringify(error.response.data));
+        });
     }
   }
   extractHidden(body) {
