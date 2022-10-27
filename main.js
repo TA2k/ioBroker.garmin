@@ -86,7 +86,8 @@ class Garmin extends utils.Adapter {
       url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
         referer: "https://connect.garmin.com/",
       },
@@ -131,7 +132,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
-        let body = res.data;
+        const body = res.data;
         try {
           if (res.data.includes("window.VIEWER_USERPREFERENCES")) {
             this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
@@ -161,12 +162,33 @@ class Garmin extends utils.Adapter {
           });
         }
       });
+    await this.requestClient({
+      method: "post",
+      url: "https://connect.garmin.com/modern/di-oauth/exchange",
+      headers: {
+        accept: "application/json, text/plain, */*",
+        "x-app-ver": "4.60.2.0",
+        NK: "NT",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "accept-language": "en-GB,en;q=0.9",
+      },
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        this.session = res.data;
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
     return await this.requestClient({
       method: "get",
       url: "https://connect.garmin.com/modern/?ticket=" + ticket,
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
       },
     })
@@ -189,10 +211,6 @@ class Garmin extends utils.Adapter {
         return true;
       })
       .catch((error) => {
-        if (error.response && error.response.status === 403) {
-          this.log.error("Please update your Node version to Node 18 or higher");
-          return;
-        }
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
@@ -212,7 +230,8 @@ class Garmin extends utils.Adapter {
         this.log.debug(JSON.stringify(res.data));
         if (res.data.devices) {
           this.log.info(`Found ${res.data.devices.length} devices`);
-          for (device of res.data.devices) {
+          for (const device of res.data.devices) {
+            this.log.info(JSON.stringify(device));
           }
         }
       })
