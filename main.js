@@ -58,7 +58,7 @@ class Garmin extends utils.Adapter {
     }
     const cookieState = await this.getStateAsync("cookie");
     if (cookieState && cookieState.val) {
-      //this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
+      this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
 
     this.updateInterval = null;
@@ -245,25 +245,32 @@ class Garmin extends utils.Adapter {
   }
 
   async updateDevices() {
+    const date = new Date().toISOString().split("T")[0];
     const statusArray = [
       {
         path: "usersummary",
-        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/daily",
+        url:
+          "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/daily/" +
+          this.userpreferences.displayName +
+          "?calendarDate=" +
+          date,
         desc: "User Summary Daily",
       },
       {
         path: "maxmet",
-        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/maxmet/daily",
+        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/maxmet/daily/" + date + "/" + date,
         desc: "Max Metrics Daily",
       },
       {
         path: "hydration",
-        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/hydration/daily",
+        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/hydration/daily/" + date,
         desc: "Hydration Daily",
       },
       {
         path: "personalrecords",
-        url: "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs",
+        url:
+          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
+          this.userpreferences.displayName,
         desc: "Personal Records",
       },
       {
@@ -273,22 +280,29 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "dailysleep",
-        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailySleepData",
+        url:
+          "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailySleepData/" +
+          this.userpreferences.displayName +
+          "?date=" +
+          date +
+          "&nonSleepBufferMinutes=60",
         desc: "Daily Sleep",
       },
       {
         path: "dailystress",
-        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailyStress",
+        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailyStress/" + date,
         desc: "Daily Stress",
       },
       {
         path: "heartrate",
-        url: "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily",
+        url:
+          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" +
+          this.userpreferences.displayName,
         desc: "Resting Heartrate",
       },
       {
         path: "trainingstatus",
-        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/trainingstatus/aggregated",
+        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/trainingstatus/aggregated/" + date,
         desc: "Training Status",
       },
       {
@@ -304,6 +318,11 @@ class Garmin extends utils.Adapter {
       await this.requestClient({
         method: element.method || "get",
         url: element.url,
+        headers: {
+          NK: "NT",
+          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "accept-language": "en-GB,en;q=0.9",
+        },
       })
         .then(async (res) => {
           this.log.debug(JSON.stringify(res.data));
