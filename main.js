@@ -68,8 +68,8 @@ class Garmin extends utils.Adapter {
     this.subscribeStates("*");
 
     this.log.info("Login to Garmin");
-    await this.login();
-    if (this.session.access_token) {
+    const result = await this.login();
+    if (result) {
       await this.getDeviceList();
       await this.updateDevices();
       this.updateInterval = setInterval(async () => {
@@ -86,8 +86,7 @@ class Garmin extends utils.Adapter {
       url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
         referer: "https://connect.garmin.com/",
       },
@@ -100,9 +99,27 @@ class Garmin extends utils.Adapter {
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
-    await this.requestClient({
+    let url =
+      "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false";
+    let data = {
+      username: this.config.username,
+      password: this.config.password,
+      csrf: form.csrf,
+      embed: "false",
+      rememberme: "on",
+    };
+    if (this.config.mfa) {
+      url =
+        "https://sso.garmin.com/sso/verifyMFA/loginEnterMfaCode?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false";
+      data = {
+        "mfa-code": this.config.mfa,
+        embed: "false",
+        fromPage: "setupEnterMfaCode",
+      };
+    }
+    const ticket = await this.requestClient({
       method: "post",
-      url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
+      url: url,
       headers: {
         Host: "sso.garmin.com",
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -110,27 +127,64 @@ class Garmin extends utils.Adapter {
         "accept-language": "en-GB,en;q=0.9",
         "content-type": "application/x-www-form-urlencoded",
       },
-      data: qs.stringify({
-        username: this.config.username,
-        password: this.config.password,
-        csrf: form.csrf,
-        rememberme: "on",
-      }),
+      data: qs.stringify(data),
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        let body = res.data;
+        try {
+          if (res.data.includes("window.VIEWER_USERPREFERENCES")) {
+            this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
+            this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
+            this.json2iob.parse("userpreferences", this.userpreferences);
+            this.json2iob.parse("social_profile", this.social_media);
+          }
+        } catch (error) {
+          this.log.error(error);
+        }
+        if (res.data.includes("submit-mfa-verification-code-form")) {
+          this.log.info("MFA required. Please enter MFA in the settings");
+          return;
+        }
+        return body.split("ticket=")[1].split('";')[0];
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+        if (this.config.mfa) {
+          const adapterConfig = "system.adapter." + this.name + "." + this.instance;
+          this.getForeignObject(adapterConfig, (error, obj) => {
+            if (obj && obj.native && obj.native.mfa) {
+              obj.native.mfa = "";
+              this.setForeignObject(adapterConfig, obj);
+            }
+          });
+        }
+      });
+    return await this.requestClient({
+      method: "get",
+      url: "https://connect.garmin.com/modern/?ticket=" + ticket,
+      headers: {
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "accept-language": "en-GB,en;q=0.9",
+      },
     })
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
 
         this.setState("cookie", JSON.stringify(this.cookieJar.toJSON()), true);
-
-        this.setState("info.connection", true, true);
         try {
-          this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
-          this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
-          this.json2iob.parse("userpreferences", this.userpreferences);
-          this.json2iob.parse("social_profile", this.social_media);
+          if (res.data.includes("window.VIEWER_USERPREFERENCES")) {
+            this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
+            this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
+            this.json2iob.parse("userpreferences", this.userpreferences);
+            this.json2iob.parse("social_profile", this.social_media);
+          }
         } catch (error) {
           this.log.error(error);
         }
+        this.setState("info.connection", true, true);
 
         return true;
       })
@@ -147,59 +201,18 @@ class Garmin extends utils.Adapter {
   async getDeviceList() {
     await this.requestClient({
       method: "get",
-      url: "",
+      url: "https://connect.garmin.com/modern/proxy/device-service/deviceregistration/devices",
+      headers: {
+        NK: "NT",
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-GB,en;q=0.9",
+      },
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
-
-        //this.log.info(`Found ${res.data} devices`);
-        const locations = res.data[this.session.accountId];
-        for (const location in locations) {
-          this.log.info(`Found ${locations[location].length} devices in location ${location}`);
-          for (const device of locations[location]) {
-            const id = device.SAID;
-
-            this.deviceArray.push(id);
-            const name = device.APPLIANCE_NAME + " " + device.CATEGORY_NAME;
-
-            await this.setObjectNotExistsAsync(id, {
-              type: "device",
-              common: {
-                name: name,
-              },
-              native: {},
-            });
-            await this.setObjectNotExistsAsync(id + ".remote", {
-              type: "channel",
-              common: {
-                name: "Remote Controls",
-              },
-              native: {},
-            });
-
-            const remoteArray = [{ command: "Refresh", name: "True = Refresh" }];
-            remoteArray.forEach((remote) => {
-              this.setObjectNotExists(id + ".remote." + remote.command, {
-                type: "state",
-                common: {
-                  name: remote.name || "",
-                  type: remote.type || "boolean",
-                  role: remote.role || "boolean",
-                  def: remote.def || false,
-                  write: true,
-                  read: true,
-                },
-                native: {},
-              });
-            });
-            await this.setObjectNotExistsAsync(id + ".general", {
-              type: "channel",
-              common: {
-                name: "General Information",
-              },
-              native: {},
-            });
-            this.json2iob.parse(id + ".general", device, { forceIndex: true });
+        if (res.data.devices) {
+          this.log.info(`Found ${res.data.devices.length} devices`);
+          for (device of res.data.devices) {
           }
         }
       })
@@ -287,21 +300,7 @@ class Garmin extends utils.Adapter {
   async refreshToken() {
     this.log.debug("Refresh token");
 
-    await this.requestClient({
-      method: "post",
-      url: "",
-    })
-      .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-        this.session = res.data;
-        this.log.debug("Refresh successful");
-        this.setState("info.connection", true, true);
-      })
-      .catch(async (error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
-        this.setStateAsync("info.connection", false, true);
-      });
+    await this.login();
   }
 
   /**
