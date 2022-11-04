@@ -153,8 +153,9 @@ class Garmin extends utils.Adapter {
           this.log.error("Please update node to version 18 or higher");
           return;
         }
+        this.log.error("Failed ticket please check username and password");
         this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        error.response && this.log.debug(JSON.stringify(error.response.data));
         if (this.config.mfa) {
           const adapterConfig = "system.adapter." + this.name + "." + this.instance;
           this.getForeignObject(adapterConfig, (error, obj) => {
@@ -165,7 +166,9 @@ class Garmin extends utils.Adapter {
           });
         }
       });
-
+    if (!ticket) {
+      return;
+    }
     const result = await this.requestClient({
       method: "get",
       url: "https://connect.garmin.com/modern/?ticket=" + ticket,
