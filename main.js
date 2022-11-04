@@ -86,8 +86,7 @@ class Garmin extends utils.Adapter {
       url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
         referer: "https://connect.garmin.com/",
       },
@@ -172,8 +171,7 @@ class Garmin extends utils.Adapter {
       url: "https://connect.garmin.com/modern/?ticket=" + ticket,
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
       },
     })
@@ -229,12 +227,56 @@ class Garmin extends utils.Adapter {
         "accept-language": "en-GB,en;q=0.9",
       },
     })
-      .then((res) => {
+      .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
-        if (res.data.devices) {
-          this.log.info(`Found ${res.data.devices.length} devices`);
-          for (const device of res.data.devices) {
-            this.log.info(JSON.stringify(device));
+        if (res.data) {
+          this.log.info(`Found ${res.data.length} devices`);
+          await this.setObjectNotExistsAsync("devices", {
+            type: "channel",
+            common: {
+              name: "Devices",
+            },
+            native: {},
+          });
+
+          for (const device of res.data) {
+            this.log.debug(JSON.stringify(device));
+            const id = device.unitId.toString();
+
+            this.deviceArray.push(device);
+            const name = device.productDisplayName;
+
+            await this.setObjectNotExistsAsync("devices." + id, {
+              type: "device",
+              common: {
+                name: name,
+              },
+              native: {},
+            });
+            // await this.setObjectNotExistsAsync(id + ".remote", {
+            //   type: "channel",
+            //   common: {
+            //     name: "Remote Controls",
+            //   },
+            //   native: {},
+            // });
+
+            // const remoteArray = [{ command: "Refresh", name: "True = Refresh" }];
+            // remoteArray.forEach((remote) => {
+            //   this.setObjectNotExists(id + ".remote." + remote.command, {
+            //     type: "state",
+            //     common: {
+            //       name: remote.name || "",
+            //       type: remote.type || "boolean",
+            //       role: remote.role || "boolean",
+            //       def: remote.def || false,
+            //       write: true,
+            //       read: true,
+            //     },
+            //     native: {},
+            //   });
+            // });
+            this.json2iob.parse("devices." + id + ".general", device, { forceIndex: true });
           }
         }
       })
@@ -246,6 +288,7 @@ class Garmin extends utils.Adapter {
 
   async updateDevices() {
     const date = new Date().toISOString().split("T")[0];
+    const dateMinus10 = new Date(new Date().setDate(new Date().getDate() - 6)).toISOString().split("T")[0];
     const statusArray = [
       {
         path: "usersummary",
@@ -268,9 +311,7 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "personalrecords",
-        url:
-          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
-          this.userpreferences.displayName,
+        url: "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" + this.userpreferences.displayName,
         desc: "Personal Records",
       },
       {
@@ -296,8 +337,7 @@ class Garmin extends utils.Adapter {
       {
         path: "heartrate",
         url:
-          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" +
-          this.userpreferences.displayName,
+          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" + this.userpreferences.displayName + "?fromDate=" + dateMinus10,
         desc: "Resting Heartrate",
       },
       {
@@ -307,7 +347,7 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "activities",
-        url: "https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities",
+        url: "https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities?start=0&limit=10",
         desc: "Activities",
       },
     ];
