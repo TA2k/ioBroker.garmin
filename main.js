@@ -350,6 +350,11 @@ class Garmin extends utils.Adapter {
         url: "https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities?start=0&limit=10",
         desc: "Activities",
       },
+      {
+        path: "weight",
+        url: "https://connect.garmin.com/modern/proxy/weight-service/weight/dateRange?startDate=" + dateMinus10 + "&endDate=" + date,
+        desc: "Weight",
+      },
     ];
 
     for (const element of statusArray) {
