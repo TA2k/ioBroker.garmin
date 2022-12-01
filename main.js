@@ -7,7 +7,8 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require("@iobroker/adapter-core");
-const axios = require("axios");
+const axios = require("axios").default;
+const got = require("got").default;
 const Json2iob = require("./lib/json2iob");
 const tough = require("tough-cookie");
 const qs = require("qs");
@@ -86,7 +87,8 @@ class Garmin extends utils.Adapter {
       url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
         referer: "https://connect.garmin.com/",
       },
@@ -117,19 +119,23 @@ class Garmin extends utils.Adapter {
         fromPage: "setupEnterMfaCode",
       };
     }
-    const ticket = await this.requestClient({
-      method: "post",
-      url: url,
-      headers: {
-        Host: "sso.garmin.com",
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        origin: "https://sso.garmin.com",
-        "accept-language": "en-GB,en;q=0.9",
-        "content-type": "application/x-www-form-urlencoded",
-      },
-      data: qs.stringify(data),
-    })
+
+    const ticket = await got
+      .post(url, {
+        http2: true,
+        request: http2wrapper.auto,
+        headers: {
+          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "content-type": "application/x-www-form-urlencoded",
+          "accept-language": "de-de",
+          "user-agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+        },
+
+        body: qs.stringify(data),
+      })
       .then((res) => {
+        res.data = res.body;
         this.log.debug(JSON.stringify(res.data));
         const body = res.data;
         try {
@@ -166,6 +172,7 @@ class Garmin extends utils.Adapter {
           });
         }
       });
+
     if (!ticket) {
       return;
     }
@@ -174,7 +181,8 @@ class Garmin extends utils.Adapter {
       url: "https://connect.garmin.com/modern/?ticket=" + ticket,
       headers: {
         accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "user-agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
         "accept-language": "en-GB,en;q=0.9",
       },
     })
@@ -314,7 +322,9 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "personalrecords",
-        url: "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" + this.userpreferences.displayName,
+        url:
+          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
+          this.userpreferences.displayName,
         desc: "Personal Records",
       },
       {
@@ -340,7 +350,10 @@ class Garmin extends utils.Adapter {
       {
         path: "heartrate",
         url:
-          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" + this.userpreferences.displayName + "?fromDate=" + dateMinus10,
+          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" +
+          this.userpreferences.displayName +
+          "?fromDate=" +
+          dateMinus10,
         desc: "Resting Heartrate",
       },
       {
@@ -355,7 +368,11 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "weight",
-        url: "https://connect.garmin.com/modern/proxy/weight-service/weight/dateRange?startDate=" + dateMinus10 + "&endDate=" + date,
+        url:
+          "https://connect.garmin.com/modern/proxy/weight-service/weight/dateRange?startDate=" +
+          dateMinus10 +
+          "&endDate=" +
+          date,
         desc: "Weight",
       },
     ];
