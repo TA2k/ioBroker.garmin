@@ -123,7 +123,6 @@ class Garmin extends utils.Adapter {
     const ticket = await got
       .post(url, {
         http2: true,
-        request: http2wrapper.auto,
         headers: {
           accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "content-type": "application/x-www-form-urlencoded",
