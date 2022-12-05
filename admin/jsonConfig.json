@@ -72,6 +72,24 @@
         "pl": "Interwał aktualizacji (w minutach)",
         "zh-cn": "更新间隔（分钟）"
       }
+    },
+    "adhoc": {
+      "type": "checkbox",
+      "newLine": true,
+      "sm": 2,
+      "label": {
+        "en": "Fetch Adhoc and Personal records ",
+        "de": "Fetch Adhoc und Personal records",
+        "ru": "Fetch Adhoc и Личные записи",
+        "pt": "Fetch Adhoc e registros pessoais",
+        "nl": "Haal Adhoc en Persoonlijke gegevens",
+        "fr": "Fetch Adhoc et les dossiers personnels",
+        "it": "Registrazione Adhoc e Personal records",
+        "es": "Registros Fetch Adhoc y Personal",
+        "pl": "Fetch Adhoc and Personal records",
+        "uk": "Fetch Adhoc та особисті записи",
+        "zh-cn": "Fetch Adhoc和个人记录"
+      }
     }
   }
 }

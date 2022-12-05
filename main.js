@@ -319,18 +319,7 @@ class Garmin extends utils.Adapter {
         url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/hydration/daily/" + date,
         desc: "Hydration Daily",
       },
-      {
-        path: "personalrecords",
-        url:
-          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
-          this.userpreferences.displayName,
-        desc: "Personal Records",
-      },
-      {
-        path: "adhocchallenge",
-        url: "https://connect.garmin.com/modern/proxy/adhocchallenge-service/adHocChallenge/historical",
-        desc: "Adhoc Challenge",
-      },
+
       {
         path: "dailysleep",
         url:
@@ -376,6 +365,20 @@ class Garmin extends utils.Adapter {
       },
     ];
 
+    if (this.config.adhoc) {
+      statusArray.push({
+        path: "adhocchallenge",
+        url: "https://connect.garmin.com/modern/proxy/adhocchallenge-service/adHocChallenge/historical",
+        desc: "Adhoc Challenge",
+      });
+      statusArray.push({
+        path: "personalrecords",
+        url:
+          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
+          this.userpreferences.displayName,
+        desc: "Personal Records",
+      });
+    }
     for (const element of statusArray) {
       // const url = element.url.replace("$id", id);
 
