@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "garmin",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "news": {
+      "0.0.4": {
+        "en": "fix installation issue",
+        "de": "Installation Problem behoben"
+      },
       "0.0.3": {
         "en": "initial release",
         "de": "Erstveröffentlichung",
