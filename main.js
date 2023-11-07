@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 /*
  * Created with @iobroker/create-adapter v2.3.0
@@ -6,13 +6,13 @@
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
-const utils = require("@iobroker/adapter-core");
-const axios = require("axios").default;
-const got = require("got").default;
-const Json2iob = require("./lib/json2iob");
-const tough = require("tough-cookie");
-const qs = require("qs");
-const { HttpsCookieAgent } = require("http-cookie-agent/http");
+const utils = require('@iobroker/adapter-core');
+const axios = require('axios').default;
+const got = require('got').default;
+const Json2iob = require('json2iob');
+const tough = require('tough-cookie');
+const qs = require('qs');
+const { HttpsCookieAgent } = require('http-cookie-agent/http');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -24,11 +24,11 @@ class Garmin extends utils.Adapter {
   constructor(options) {
     super({
       ...options,
-      name: "garmin",
+      name: 'garmin',
     });
-    this.on("ready", this.onReady.bind(this));
-    this.on("stateChange", this.onStateChange.bind(this));
-    this.on("unload", this.onUnload.bind(this));
+    this.on('ready', this.onReady.bind(this));
+    this.on('stateChange', this.onStateChange.bind(this));
+    this.on('unload', this.onUnload.bind(this));
     this.deviceArray = [];
 
     this.json2iob = new Json2iob(this);
@@ -48,16 +48,16 @@ class Garmin extends utils.Adapter {
    */
   async onReady() {
     // Reset the connection indicator during startup
-    this.setState("info.connection", false, true);
+    this.setState('info.connection', false, true);
     if (this.config.interval < 0.5) {
-      this.log.info("Set interval to minimum 0.5");
+      this.log.info('Set interval to minimum 0.5');
       this.config.interval = 0.5;
     }
     if (!this.config.username || !this.config.password) {
-      this.log.error("Please set username and password in the instance settings");
+      this.log.error('Please set username and password in the instance settings');
       return;
     }
-    const cookieState = await this.getStateAsync("cookie");
+    const cookieState = await this.getStateAsync('cookie');
     if (cookieState && cookieState.val) {
       this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
@@ -66,9 +66,9 @@ class Garmin extends utils.Adapter {
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
     this.session = {};
-    this.subscribeStates("*");
+    this.subscribeStates('*');
 
-    this.log.info("Login to Garmin");
+    this.log.info('Login to Garmin');
     const result = await this.login();
     if (result) {
       await this.getDeviceList();
@@ -89,14 +89,14 @@ class Garmin extends utils.Adapter {
   }
   async login() {
     const form = await this.requestClient({
-      method: "get",
-      url: "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
+      method: 'get',
+      url: 'https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false',
       headers: {
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
-        "accept-language": "en-GB,en;q=0.9",
-        referer: "https://connect.garmin.com/",
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'user-agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
+        'accept-language': 'en-GB,en;q=0.9',
+        referer: 'https://connect.garmin.com/',
       },
     })
       .then((res) => {
@@ -108,21 +108,21 @@ class Garmin extends utils.Adapter {
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
     let url =
-      "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false";
+      'https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false';
     let data = {
       username: this.config.username,
       password: this.config.password,
       _csrf: form._csrf,
-      embed: "false",
-      rememberme: "on",
+      embed: 'false',
+      rememberme: 'on',
     };
     if (this.config.mfa) {
       url =
-        "https://sso.garmin.com/sso/verifyMFA/loginEnterMfaCode?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false";
+        'https://sso.garmin.com/sso/verifyMFA/loginEnterMfaCode?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false';
       data = {
-        "mfa-code": this.config.mfa,
-        embed: "false",
-        fromPage: "setupEnterMfaCode",
+        'mfa-code': this.config.mfa,
+        embed: 'false',
+        fromPage: 'setupEnterMfaCode',
       };
     }
 
@@ -130,11 +130,11 @@ class Garmin extends utils.Adapter {
       .post(url, {
         http2: true,
         headers: {
-          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "content-type": "application/x-www-form-urlencoded",
-          "accept-language": "de-de",
-          "user-agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'content-type': 'application/x-www-form-urlencoded',
+          'accept-language': 'de-de',
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
         },
 
         body: qs.stringify(data),
@@ -144,34 +144,34 @@ class Garmin extends utils.Adapter {
         this.log.debug(JSON.stringify(res.data));
         const body = res.data;
         try {
-          if (res.data.includes("window.VIEWER_USERPREFERENCES")) {
-            this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
-            this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
-            this.json2iob.parse("userpreferences", this.userpreferences);
-            this.json2iob.parse("social_profile", this.social_media);
+          if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
+            this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
+            this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
+            this.json2iob.parse('userpreferences', this.userpreferences);
+            this.json2iob.parse('social_profile', this.social_media);
           }
         } catch (error) {
           this.log.error(error);
         }
-        if (res.data.includes("submit-mfa-verification-code-form")) {
-          this.log.info("MFA required. Please enter MFA in the settings");
+        if (res.data.includes('submit-mfa-verification-code-form')) {
+          this.log.info('MFA required. Please enter MFA in the settings');
           return;
         }
-        return body.split("ticket=")[1].split('";')[0];
+        return body.split('ticket=')[1].split('";')[0];
       })
       .catch((error) => {
         if (error.response && error.response.status === 403) {
-          this.log.error("Please update node to version 18 or higher");
+          this.log.error('Please update node to version 18 or higher');
           return;
         }
-        this.log.error("Failed ticket please check username and password");
+        this.log.error('Failed ticket please check username and password');
         this.log.error(error);
         error.response && this.log.debug(JSON.stringify(error.response.data));
         if (this.config.mfa) {
-          const adapterConfig = "system.adapter." + this.name + "." + this.instance;
+          const adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
           this.getForeignObject(adapterConfig, (error, obj) => {
             if (obj && obj.native && obj.native.mfa) {
-              obj.native.mfa = "";
+              obj.native.mfa = '';
               this.setForeignObject(adapterConfig, obj);
             }
           });
@@ -182,37 +182,37 @@ class Garmin extends utils.Adapter {
       return;
     }
     const result = await this.requestClient({
-      method: "get",
-      url: "https://connect.garmin.com/modern/?ticket=" + ticket,
+      method: 'get',
+      url: 'https://connect.garmin.com/modern/?ticket=' + ticket,
       headers: {
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "user-agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
-        "accept-language": "en-GB,en;q=0.9",
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'user-agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
+        'accept-language': 'en-GB,en;q=0.9',
       },
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
 
-        this.setState("cookie", JSON.stringify(this.cookieJar.toJSON()), true);
+        this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
         try {
-          if (res.data.includes("window.VIEWER_USERPREFERENCES")) {
-            this.userpreferences = JSON.parse(res.data.split("window.VIEWER_USERPREFERENCES = ")[1].split(";\n")[0]);
-            this.social_media = JSON.parse(res.data.split("window.VIEWER_SOCIAL_PROFILE = ")[1].split(";\n")[0]);
-            this.json2iob.parse("userpreferences", this.userpreferences);
-            this.json2iob.parse("social_profile", this.social_media);
+          if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
+            this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
+            this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
+            this.json2iob.parse('userpreferences', this.userpreferences);
+            this.json2iob.parse('social_profile', this.social_media);
           }
         } catch (error) {
           this.log.error(error);
         }
-        this.setState("info.connection", true, true);
+        this.setState('info.connection', true, true);
         await this.requestClient({
-          method: "post",
-          url: "https://connect.garmin.com/modern/di-oauth/exchange",
+          method: 'post',
+          url: 'https://connect.garmin.com/modern/di-oauth/exchange',
           headers: {
-            accept: "application/json, text/plain, */*",
-            "x-app-ver": "4.60.2.0",
-            NK: "NT",
+            accept: 'application/json, text/plain, */*',
+            'x-app-ver': '4.60.2.0',
+            NK: 'NT',
           },
         })
           .then((res) => {
@@ -235,23 +235,23 @@ class Garmin extends utils.Adapter {
 
   async getDeviceList() {
     await this.requestClient({
-      method: "get",
-      url: "https://connect.garmin.com/device-service/deviceregistration/devices",
+      method: 'get',
+      url: 'https://connect.garmin.com/device-service/deviceregistration/devices',
       headers: {
-        Authorization: "Bearer " + this.session.access_token,
-        "DI-Backend": "connectapi.garmin.com",
-        Accept: "application/json, text/plain, */*",
-        NK: "NT",
+        Authorization: 'Bearer ' + this.session.access_token,
+        'DI-Backend': 'connectapi.garmin.com',
+        Accept: 'application/json, text/plain, */*',
+        NK: 'NT',
       },
     })
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
         if (res.data) {
           this.log.info(`Found ${res.data.length} devices`);
-          await this.setObjectNotExistsAsync("devices", {
-            type: "channel",
+          await this.setObjectNotExistsAsync('devices', {
+            type: 'channel',
             common: {
-              name: "Devices",
+              name: 'Devices',
             },
             native: {},
           });
@@ -263,8 +263,8 @@ class Garmin extends utils.Adapter {
             this.deviceArray.push(device);
             const name = device.productDisplayName;
 
-            await this.setObjectNotExistsAsync("devices." + id, {
-              type: "device",
+            await this.setObjectNotExistsAsync('devices.' + id, {
+              type: 'device',
               common: {
                 name: name,
               },
@@ -293,7 +293,7 @@ class Garmin extends utils.Adapter {
             //     native: {},
             //   });
             // });
-            this.json2iob.parse("devices." + id + ".general", device, { forceIndex: true });
+            this.json2iob.parse('devices.' + id + '.general', device, { forceIndex: true });
           }
         }
       })
@@ -304,76 +304,76 @@ class Garmin extends utils.Adapter {
   }
 
   async updateDevices() {
-    const date = new Date().toISOString().split("T")[0];
-    const dateMinus10 = new Date(new Date().setDate(new Date().getDate() - 6)).toISOString().split("T")[0];
+    const date = new Date().toISOString().split('T')[0];
+    const dateMinus10 = new Date(new Date().setDate(new Date().getDate() - 6)).toISOString().split('T')[0];
     const statusArray = [
       {
-        path: "usersummary",
+        path: 'usersummary',
         url:
-          "https://connect.garmin.com/usersummary-service/usersummary/daily/" +
+          'https://connect.garmin.com/usersummary-service/usersummary/daily/' +
           this.userpreferences.displayName +
-          "?calendarDate=" +
+          '?calendarDate=' +
           date,
-        desc: "User Summary Daily",
+        desc: 'User Summary Daily',
       },
       {
-        path: "maxmet",
-        url: "https://connect.garmin.com/metrics-service/metrics/maxmet/daily/" + date + "/" + date,
-        desc: "Max Metrics Daily",
+        path: 'maxmet',
+        url: 'https://connect.garmin.com/metrics-service/metrics/maxmet/daily/' + date + '/' + date,
+        desc: 'Max Metrics Daily',
       },
       {
-        path: "hydration",
-        url: "https://connect.garmin.com/usersummary-service/usersummary/hydration/daily/" + date,
-        desc: "Hydration Daily",
+        path: 'hydration',
+        url: 'https://connect.garmin.com/usersummary-service/usersummary/hydration/daily/' + date,
+        desc: 'Hydration Daily',
       },
       {
-        path: "personalrecords",
-        url: "https://connect.garmin.com/personalrecord-service/personalrecord/prs/" + this.userpreferences.displayName,
-        desc: "Personal Records",
+        path: 'personalrecords',
+        url: 'https://connect.garmin.com/personalrecord-service/personalrecord/prs/' + this.userpreferences.displayName,
+        desc: 'Personal Records',
       },
       {
-        path: "adhocchallenge",
-        url: "https://connect.garmin.com/adhocchallenge-service/adHocChallenge/historical",
-        desc: "Adhoc Challenge",
+        path: 'adhocchallenge',
+        url: 'https://connect.garmin.com/adhocchallenge-service/adHocChallenge/historical',
+        desc: 'Adhoc Challenge',
       },
       {
-        path: "dailysleep",
+        path: 'dailysleep',
         url:
-          "https://connect.garmin.com/wellness-service/wellness/dailySleepData/" +
+          'https://connect.garmin.com/wellness-service/wellness/dailySleepData/' +
           this.userpreferences.displayName +
-          "?date=" +
+          '?date=' +
           date +
-          "&nonSleepBufferMinutes=60",
-        desc: "Daily Sleep",
+          '&nonSleepBufferMinutes=60',
+        desc: 'Daily Sleep',
       },
       {
-        path: "dailystress",
-        url: "https://connect.garmin.com/wellness-service/wellness/dailyStress/" + date,
-        desc: "Daily Stress",
+        path: 'dailystress',
+        url: 'https://connect.garmin.com/wellness-service/wellness/dailyStress/' + date,
+        desc: 'Daily Stress',
       },
       {
-        path: "heartrate",
+        path: 'heartrate',
         url:
-          "https://connect.garmin.com/userstats-service/wellness/daily/" +
+          'https://connect.garmin.com/userstats-service/wellness/daily/' +
           this.userpreferences.displayName +
-          "?fromDate=" +
+          '?fromDate=' +
           dateMinus10,
-        desc: "Resting Heartrate",
+        desc: 'Resting Heartrate',
       },
       {
-        path: "trainingstatus",
-        url: "https://connect.garmin.com/metrics-service/metrics/trainingstatus/aggregated/" + date,
-        desc: "Training Status",
+        path: 'trainingstatus',
+        url: 'https://connect.garmin.com/metrics-service/metrics/trainingstatus/aggregated/' + date,
+        desc: 'Training Status',
       },
       {
-        path: "activities",
-        url: "https://connect.garmin.com/activitylist-service/activities/search/activities?start=0&limit=10",
-        desc: "Activities",
+        path: 'activities',
+        url: 'https://connect.garmin.com/activitylist-service/activities/search/activities?start=0&limit=10',
+        desc: 'Activities',
       },
       {
-        path: "weight",
-        url: "https://connect.garmin.com/weight-service/weight/dateRange?startDate=" + dateMinus10 + "&endDate=" + date,
-        desc: "Weight",
+        path: 'weight',
+        url: 'https://connect.garmin.com/weight-service/weight/dateRange?startDate=' + dateMinus10 + '&endDate=' + date,
+        desc: 'Weight',
       },
     ];
 
@@ -381,14 +381,14 @@ class Garmin extends utils.Adapter {
       // const url = element.url.replace("$id", id);
 
       await this.requestClient({
-        method: element.method || "get",
+        method: element.method || 'get',
         url: element.url,
         headers: {
-          NK: "NT",
-          accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "accept-language": "en-GB,en;q=0.9",
-          Authorization: "Bearer " + this.session.access_token,
-          "DI-Backend": "connectapi.garmin.com",
+          NK: 'NT',
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'accept-language': 'en-GB,en;q=0.9',
+          Authorization: 'Bearer ' + this.session.access_token,
+          'DI-Backend': 'connectapi.garmin.com',
         },
       })
         .then(async (res) => {
@@ -424,7 +424,7 @@ class Garmin extends utils.Adapter {
           if (error.response) {
             if (error.response.status === 401) {
               error.response && this.log.debug(JSON.stringify(error.response.data));
-              this.log.info(element.path + " receive 401 error. Refresh Token in 60 seconds");
+              this.log.info(element.path + ' receive 401 error. Refresh Token in 60 seconds');
               this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
               this.refreshTokenTimeout = setTimeout(() => {
                 this.refreshToken();
@@ -450,7 +450,7 @@ class Garmin extends utils.Adapter {
     return returnObject;
   }
   async refreshToken() {
-    this.log.debug("Refresh token");
+    this.log.debug('Refresh token');
 
     await this.login();
   }
@@ -461,7 +461,7 @@ class Garmin extends utils.Adapter {
    */
   onUnload(callback) {
     try {
-      this.setState("info.connection", false, true);
+      this.setState('info.connection', false, true);
       this.refreshTimeout && clearTimeout(this.refreshTimeout);
       this.reLoginTimeout && clearTimeout(this.reLoginTimeout);
       this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
@@ -481,24 +481,24 @@ class Garmin extends utils.Adapter {
   async onStateChange(id, state) {
     if (state) {
       if (!state.ack) {
-        const deviceId = id.split(".")[2];
-        const command = id.split(".")[5];
+        const deviceId = id.split('.')[2];
+        const command = id.split('.')[5];
 
-        if (id.split(".")[4] === "Refresh") {
+        if (id.split('.')[4] === 'Refresh') {
           this.updateDevices();
           return;
         }
         const data = {
           body: {},
           header: {
-            command: "setAttributes",
+            command: 'setAttributes',
             said: deviceId,
           },
         };
         data.body[command] = state.val;
         await this.requestClient({
-          method: "post",
-          url: "",
+          method: 'post',
+          url: '',
         })
           .then((res) => {
             this.log.info(JSON.stringify(res.data));
@@ -508,7 +508,7 @@ class Garmin extends utils.Adapter {
             error.response && this.log.error(JSON.stringify(error.response.data));
           });
         this.refreshTimeout = setTimeout(async () => {
-          this.log.info("Update devices");
+          this.log.info('Update devices');
           await this.updateDevices();
         }, 10 * 1000);
       }

@@ -24,7 +24,7 @@
     "axios": "^1.6.0",
     "got": "^11.8.6",
     "http-cookie-agent": "^5.0.4",
-    "json-bigint": "^1.0.0",
+    "json2iob": "^2.4.8",
     "qs": "^6.11.2",
     "tough-cookie": "^4.1.3"
   },
