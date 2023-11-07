@@ -73,13 +73,19 @@ class Garmin extends utils.Adapter {
     if (result) {
       await this.getDeviceList();
       await this.updateDevices();
-      this.updateInterval = setInterval(async () => {
-        await this.updateDevices();
-      }, this.config.interval * 60 * 1000);
+      this.updateInterval = setInterval(
+        async () => {
+          await this.updateDevices();
+        },
+        this.config.interval * 60 * 1000,
+      );
     }
-    this.refreshTokenInterval = setInterval(() => {
-      this.refreshToken();
-    }, (this.session.expires_in || 3600) * 1000);
+    this.refreshTokenInterval = setInterval(
+      () => {
+        this.refreshToken();
+      },
+      (this.session.expires_in || 3600) * 1000,
+    );
   }
   async login() {
     const form = await this.requestClient({
@@ -230,11 +236,12 @@ class Garmin extends utils.Adapter {
   async getDeviceList() {
     await this.requestClient({
       method: "get",
-      url: "https://connect.garmin.com/modern/proxy/device-service/deviceregistration/devices",
+      url: "https://connect.garmin.com/device-service/deviceregistration/devices",
       headers: {
+        Authorization: "Bearer " + this.session.access_token,
+        "DI-Backend": "connectapi.garmin.com",
+        Accept: "application/json, text/plain, */*",
         NK: "NT",
-        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "accept-language": "en-GB,en;q=0.9",
       },
     })
       .then(async (res) => {
@@ -303,7 +310,7 @@ class Garmin extends utils.Adapter {
       {
         path: "usersummary",
         url:
-          "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/daily/" +
+          "https://connect.garmin.com/usersummary-service/usersummary/daily/" +
           this.userpreferences.displayName +
           "?calendarDate=" +
           date,
@@ -311,19 +318,28 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "maxmet",
-        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/maxmet/daily/" + date + "/" + date,
+        url: "https://connect.garmin.com/metrics-service/metrics/maxmet/daily/" + date + "/" + date,
         desc: "Max Metrics Daily",
       },
       {
         path: "hydration",
-        url: "https://connect.garmin.com/modern/proxy/usersummary-service/usersummary/hydration/daily/" + date,
+        url: "https://connect.garmin.com/usersummary-service/usersummary/hydration/daily/" + date,
         desc: "Hydration Daily",
       },
-
+      {
+        path: "personalrecords",
+        url: "https://connect.garmin.com/personalrecord-service/personalrecord/prs/" + this.userpreferences.displayName,
+        desc: "Personal Records",
+      },
+      {
+        path: "adhocchallenge",
+        url: "https://connect.garmin.com/adhocchallenge-service/adHocChallenge/historical",
+        desc: "Adhoc Challenge",
+      },
       {
         path: "dailysleep",
         url:
-          "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailySleepData/" +
+          "https://connect.garmin.com/wellness-service/wellness/dailySleepData/" +
           this.userpreferences.displayName +
           "?date=" +
           date +
@@ -332,13 +348,13 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "dailystress",
-        url: "https://connect.garmin.com/modern/proxy/wellness-service/wellness/dailyStress/" + date,
+        url: "https://connect.garmin.com/wellness-service/wellness/dailyStress/" + date,
         desc: "Daily Stress",
       },
       {
         path: "heartrate",
         url:
-          "https://connect.garmin.com/modern/proxy/userstats-service/wellness/daily/" +
+          "https://connect.garmin.com/userstats-service/wellness/daily/" +
           this.userpreferences.displayName +
           "?fromDate=" +
           dateMinus10,
@@ -346,39 +362,21 @@ class Garmin extends utils.Adapter {
       },
       {
         path: "trainingstatus",
-        url: "https://connect.garmin.com/modern/proxy/metrics-service/metrics/trainingstatus/aggregated/" + date,
+        url: "https://connect.garmin.com/metrics-service/metrics/trainingstatus/aggregated/" + date,
         desc: "Training Status",
       },
       {
         path: "activities",
-        url: "https://connect.garmin.com/modern/proxy/activitylist-service/activities/search/activities?start=0&limit=10",
+        url: "https://connect.garmin.com/activitylist-service/activities/search/activities?start=0&limit=10",
         desc: "Activities",
       },
       {
         path: "weight",
-        url:
-          "https://connect.garmin.com/modern/proxy/weight-service/weight/dateRange?startDate=" +
-          dateMinus10 +
-          "&endDate=" +
-          date,
+        url: "https://connect.garmin.com/weight-service/weight/dateRange?startDate=" + dateMinus10 + "&endDate=" + date,
         desc: "Weight",
       },
     ];
 
-    if (this.config.adhoc) {
-      statusArray.push({
-        path: "adhocchallenge",
-        url: "https://connect.garmin.com/modern/proxy/adhocchallenge-service/adHocChallenge/historical",
-        desc: "Adhoc Challenge",
-      });
-      statusArray.push({
-        path: "personalrecords",
-        url:
-          "https://connect.garmin.com/modern/proxy/personalrecord-service/personalrecord/prs/" +
-          this.userpreferences.displayName,
-        desc: "Personal Records",
-      });
-    }
     for (const element of statusArray) {
       // const url = element.url.replace("$id", id);
 
@@ -389,6 +387,8 @@ class Garmin extends utils.Adapter {
           NK: "NT",
           accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "accept-language": "en-GB,en;q=0.9",
+          Authorization: "Bearer " + this.session.access_token,
+          "DI-Backend": "connectapi.garmin.com",
         },
       })
         .then(async (res) => {

@@ -1,6 +1,6 @@
 {
   "name": "iobroker.garmin",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Adapter for Garmin Connect",
   "author": {
     "name": "TA2k",
@@ -20,35 +20,35 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.6.8",
-    "axios": "^1.4.0",
+    "@iobroker/adapter-core": "^3.0.4",
+    "axios": "^1.6.0",
     "got": "^11.8.6",
-    "http-cookie-agent": "^5.0.2",
+    "http-cookie-agent": "^5.0.4",
     "json-bigint": "^1.0.0",
     "qs": "^6.11.2",
-    "tough-cookie": "^4.1.2"
+    "tough-cookie": "^4.1.3"
   },
   "devDependencies": {
     "@iobroker/testing": "^4.1.0",
-    "@tsconfig/node14": "^1.0.3",
-    "@types/chai": "^4.3.5",
-    "@types/chai-as-promised": "^7.1.5",
-    "@types/mocha": "^10.0.1",
-    "@types/node": "^18.16.14",
-    "@types/proxyquire": "^1.3.28",
-    "@types/sinon": "^10.0.15",
-    "@types/sinon-chai": "^3.2.9",
-    "chai": "^4.3.7",
+    "@tsconfig/node14": "^14.1.0",
+    "@types/chai": "^4.3.9",
+    "@types/chai-as-promised": "^7.1.8",
+    "@types/mocha": "^10.0.4",
+    "@types/node": "^20.8.10",
+    "@types/proxyquire": "^1.3.30",
+    "@types/sinon": "^17.0.0",
+    "@types/sinon-chai": "^3.2.11",
+    "chai": "^4.3.10",
     "chai-as-promised": "^7.1.1",
-    "eslint": "^8.41.0",
-    "eslint-config-prettier": "^8.8.0",
-    "eslint-plugin-prettier": "^4.2.1",
+    "eslint": "^8.53.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
     "mocha": "^10.2.0",
-    "prettier": "^2.8.8",
+    "prettier": "^3.0.3",
     "proxyquire": "^2.1.3",
-    "sinon": "^15.1.0",
+    "sinon": "^17.0.1",
     "sinon-chai": "^3.7.0",
-    "typescript": "~4.9.5"
+    "typescript": "~5.2.2"
   },
   "main": "main.js",
   "files": [
