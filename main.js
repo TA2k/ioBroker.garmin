@@ -452,7 +452,50 @@ class Garmin extends utils.Adapter {
   async refreshToken() {
     this.log.debug('Refresh token');
 
-    await this.login();
+    // await this.login();
+    await this.requestClient({
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://sso.garmin.com/sso/login?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2Factivities&webhost=https%3A%2F%2Fconnect.garmin.com&gateway=true&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&clientId=CAS_CLIENT_DEFAULT',
+      headers: {
+        Host: 'sso.garmin.com',
+        'Sec-Fetch-Site': 'same-site',
+        'Sec-Fetch-Mode': 'navigate',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+        'Accept-Language': 'en-GB,en;q=0.9',
+        Referer: 'https://sso.garmin.com/',
+        'Sec-Fetch-Dest': 'document',
+      },
+    });
+    await this.requestClient({
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: 'https://connect.garmin.com/services/auth/token/refresh',
+      headers: {
+        'Content-Type': 'application/json;charset=utf-8',
+        baggage:
+          'sentry-environment=prod,sentry-release=connect%404.73.223,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=c65147be9ffe422a80cea3485df198e7,sentry-sample_rate=1',
+        Accept: 'application/json, text/plain, */*',
+        'Sec-Fetch-Site': 'same-origin',
+        'X-app-ver': '4.73.1.0',
+        'Accept-Language': 'en-GB,en;q=0.9',
+        'Sec-Fetch-Mode': 'cors',
+        Origin: 'https://connect.garmin.com',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+        Referer: 'https://connect.garmin.com/modern/activities',
+        NK: 'NT',
+        'Sec-Fetch-Dest': 'empty',
+      },
+      data: {
+        refresh_token: this.session.refresh_token,
+      },
+    }).then((res) => {
+      this.log.debug(JSON.stringify(res.data));
+      this.session = res.data;
+    });
   }
 
   /**
