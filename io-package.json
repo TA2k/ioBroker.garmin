@@ -1,11 +1,15 @@
 {
   "common": {
     "name": "garmin",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "news": {
-      "0.1.0":{
-        "en":"fix data fetching",
-        "de":"Datenabruf gefixt"
+      "0.1.1": {
+        "en": "rework relogin to prevent blocking",
+        "de": "Login überarbeitet um Blockierung zu verhindern"
+      },
+      "0.1.0": {
+        "en": "fix data fetching",
+        "de": "Datenabruf gefixt"
       },
       "0.0.4": {
         "en": "fix installation issue",
