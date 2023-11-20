@@ -468,6 +468,10 @@ class Garmin extends utils.Adapter {
         Referer: 'https://sso.garmin.com/',
         'Sec-Fetch-Dest': 'document',
       },
+    }).catch((error) => {
+      this.log.error('Failed refresh cookies');
+      this.log.error(error);
+      error.response && this.log.error(JSON.stringify(error.response.data));
     });
     await this.requestClient({
       method: 'post',
@@ -492,10 +496,16 @@ class Garmin extends utils.Adapter {
       data: {
         refresh_token: this.session.refresh_token,
       },
-    }).then((res) => {
-      this.log.debug(JSON.stringify(res.data));
-      this.session = res.data;
-    });
+    })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        this.session = res.data;
+      })
+      .catch((error) => {
+        this.log.error('Failed refresh token');
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
   }
 
   /**
