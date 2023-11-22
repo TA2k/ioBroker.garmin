@@ -80,12 +80,9 @@ class Garmin extends utils.Adapter {
         this.config.interval * 60 * 1000,
       );
     }
-    this.refreshTokenInterval = setInterval(
-      () => {
-        this.refreshToken();
-      },
-      (this.session.expires_in || 3600) * 1000,
-    );
+    this.refreshTokenInterval = setInterval(() => {
+      this.refreshToken();
+    }, 3000 * 1000);
   }
   async login() {
     const form = await this.requestClient({
