@@ -502,6 +502,11 @@ class Garmin extends utils.Adapter {
         this.log.error('Failed refresh token');
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
+        this.log.info('Re-Login in 60 seconds');
+        this.reLoginTimeout && clearTimeout(this.reLoginTimeout);
+        this.reLoginTimeout = setTimeout(() => {
+          this.login();
+        }, 1000 * 60);
       });
   }
 
