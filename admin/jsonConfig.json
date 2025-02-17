@@ -55,6 +55,117 @@
       "newLine": true,
       "sm": 3
     },
+    "_captchaManual01": {
+      "type": "staticText",
+      "newLine": true,
+      "label": {
+        "en": "1. Open the Url below and login with your account",
+        "de": "1. Öffnen Sie die unten stehende URL und melden Sie sich mit Ihrem Konto an",
+        "ru": "1. Откройте URL ниже и войдите в свою учетную запись",
+        "pt": "1. Abra a URL abaixo e faça login com sua conta",
+        "nl": "1. Open de onderstaande URL en log in met uw account",
+        "fr": "1. Ouvrez l'URL ci-dessous et connectez-vous avec votre compte",
+        "it": "1. Apri l'URL qui sotto e accedi con il tuo account",
+        "es": "1. Abra la URL a continuación e inicie sesión con su cuenta",
+        "pl": "1. Otwórz poniższy URL i zaloguj się na swoje konto",
+        "zh-cn": "1. 打开下面的URL并使用您的帐户登录"
+      }
+    },
+    "_captchaManual02": {
+      "type": "staticText",
+      "newLine": true,
+      "label": {
+        "en": "2. Open Developer Console F12 or Option + Command + I",
+        "de": "2. Öffnen Sie die Entwicklerkonsole F12 oder Option + Command + I",
+        "ru": "2. Откройте консоль разработчика F12 или Option + Command + I",
+        "pt": "2. Abra o Console do Desenvolvedor F12 ou Option + Command + I",
+        "nl": "2. Open de ontwikkelaarsconsole F12 of Option + Command + I",
+        "fr": "2. Ouvrez la console de développement F12 ou Option + Command + I",
+        "it": "2. Apri la Console degli sviluppatori F12 o Option + Command + I",
+        "es": "2. Abra la Consola de Desarrollador F12 o Option + Command + I",
+        "pl": "2. Otwórz konsolę deweloperską F12 lub Option + Command + I",
+        "zh-cn": "2. 打开开发者控制台 F12 或 Option + Command + I"
+      }
+    },
+    "_captchaManual03": {
+      "type": "staticText",
+      "newLine": true,
+      "label": {
+        "en": "3. Enter the command: copy(localStorage.getItem('token')) in the console",
+        "de": "3. Geben Sie den Befehl ein: copy(localStorage.getItem('token')) in die Konsole ein",
+        "ru": "3. Введите команду: copy(localStorage.getItem('token')) в консоли",
+        "pt": "3. Digite o comando: copy(localStorage.getItem('token')) no console",
+        "nl": "3. Voer het commando in: copy(localStorage.getItem('token')) in de console",
+        "fr": "3. Entrez la commande: copy(localStorage.getItem('token')) dans la console",
+        "it": "3. Inserisci il comando: copy(localStorage.getItem('token')) nella console",
+        "es": "3. Ingrese el comando: copy(localStorage.getItem('token')) en la consola",
+        "pl": "3. Wprowadź polecenie: copy(localStorage.getItem('token')) w konsoli",
+        "zh-cn": "3. 在控制台中输入命令：copy(localStorage.getItem('token'))"
+      }
+    },
+    "_captchaManual04": {
+      "type": "staticText",
+      "newLine": true,
+      "label": {
+        "en": "4. Paste the content of the clipboard into the input field below",
+        "de": "4. Fügen Sie den Inhalt der Zwischenablage in das Eingabefeld unten ein",
+        "ru": "4. Вставьте содержимое буфера обмена в поле ввода ниже",
+        "pt": "4. Cole o conteúdo da área de transferência no campo de entrada abaixo",
+        "nl": "4. Plak de inhoud van het klembord in het onderstaande invoerveld",
+        "fr": "4. Collez le contenu du presse-papiers dans le champ de saisie ci-dessous",
+        "it": "4. Incolla il contenuto degli appunti nel campo di input sottostante",
+        "es": "4. Pegue el contenido del portapapeles en el campo de entrada a continuación",
+        "pl": "4. Wklej zawartość schowka do pola wprowadzania poniżej",
+        "zh-cn": "4. 将剪贴板的内容粘贴到下面的输入字段中"
+      }
+    },
+    "_captchaImg": {
+      "type": "staticImage",
+      "src": "copyurl.png",
+      "sm": 6,
+      "xl": 3,
+      "md": 3,
+      "lg": 3,
+      "xs": 12
+    },
+    "_codeUrl": {
+      "type": "staticLink",
+      "label": {
+        "en": "Garmin Login Url Click here",
+        "de": "Garmin Login Url Hier klicken",
+        "ru": "Garmin Login Url Нажмите здесь",
+        "pt": "Garmin Login Url Clique aqui",
+        "nl": "Garmin Login Url Klik hier",
+        "fr": "Garmin Login Url Cliquez ici",
+        "it": "Garmin Login Url Clicca qui",
+        "es": "Garmin Login Url Haga clic aquí",
+        "pl": "Garmin Login Url Kliknij tutaj",
+        "zh-cn": "Garmin登录网址点击这里"
+      },
+      "href": "https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false",
+      "target": "_blank",
+      "button": true,
+      "newLine": true
+    },
+
+    "token": {
+      "type": "text",
+      "newLine": true,
+      "placeholder": "Paste the token here",
+      "label": {
+        "en": "Token",
+        "de": "Token",
+        "ru": "Токен",
+        "pt": "Token",
+        "nl": "Token",
+        "fr": "Jeton",
+        "it": "Gettone",
+        "es": "Token",
+
+        "pl": "Żeton",
+        "zh-cn": "令牌"
+      }
+    },
     "interval": {
       "type": "number",
       "newLine": true,

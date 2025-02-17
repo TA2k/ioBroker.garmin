@@ -62,24 +62,55 @@ class Garmin extends utils.Adapter {
       this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
 
+    await this.extendObject('auth', {
+      type: 'channel',
+      common: {
+        name: 'Auth',
+      },
+      native: {},
+    });
+    await this.extendObject('auth.token', {
+      type: 'state',
+      common: {
+        name: 'Token',
+        type: 'string',
+        role: 'value',
+        read: true,
+        write: false,
+      },
+      native: {},
+    });
+    const tokenState = await this.getStateAsync('auth.token');
+    if (tokenState && tokenState.val) {
+      this.session = JSON.parse(tokenState.val);
+      this.log.info('Old Session found');
+    } else {
+      this.log.info('Use settings token');
+      this.session = JSON.parse(this.config.token);
+    }
+    if (!this.session || !this.session.access_token) {
+      this.log.warn('No token found. Please enter token in the settings');
+      return;
+    }
+    this.refreshToken();
     this.updateInterval = null;
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
     this.session = {};
     this.subscribeStates('*');
 
-    this.log.info('Login to Garmin');
-    const result = await this.login();
-    if (result) {
-      await this.getDeviceList();
-      await this.updateDevices();
-      this.updateInterval = setInterval(
-        async () => {
-          await this.updateDevices();
-        },
-        this.config.interval * 60 * 1000,
-      );
-    }
+    // this.log.info('Login to Garmin');
+    // const result = await this.login();
+
+    await this.getDeviceList();
+    await this.updateDevices();
+    this.updateInterval = setInterval(
+      async () => {
+        await this.updateDevices();
+      },
+      this.config.interval * 60 * 1000,
+    );
+
     this.refreshTokenInterval = setInterval(
       () => {
         this.refreshToken();
@@ -500,6 +531,7 @@ class Garmin extends utils.Adapter {
       .then((res) => {
         this.log.debug(JSON.stringify(res.data));
         this.session = res.data;
+        this.setState('auth.token', JSON.stringify(res.data), true);
       })
       .catch((error) => {
         this.log.error('Failed refresh token');

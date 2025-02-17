@@ -87,6 +87,7 @@
   "native": {
     "username": "",
     "password": "",
+    "token": "",
     "interval": 30,
     "mfa": "",
     "adhoc": false
