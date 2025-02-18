@@ -594,6 +594,7 @@ class Garmin extends utils.Adapter {
       if (this.config.token) {
         const adapterSettings = await this.getForeignObjectAsync('system.adapter.' + this.namespace);
         adapterSettings.native.token = null;
+        adapterSettings.native.fgp = null;
         await this.setForeignObjectAsync('system.adapter.' + this.namespace, adapterSettings);
       }
       callback();
