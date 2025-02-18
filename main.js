@@ -13,6 +13,7 @@ const Json2iob = require('json2iob');
 const tough = require('tough-cookie');
 const qs = require('qs');
 const { HttpsCookieAgent } = require('http-cookie-agent/http');
+const { url } = require('inspector');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -84,7 +85,7 @@ class Garmin extends utils.Adapter {
     if (tokenState && tokenState.val) {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
-    } else {
+    } else if (this.config.token) {
       this.log.info('Use settings token');
       this.session = JSON.parse(this.config.token);
     }
@@ -92,7 +93,37 @@ class Garmin extends utils.Adapter {
       this.log.warn('No token found. Please enter token in the settings');
       return;
     }
-    this.refreshToken();
+    await this.refreshToken();
+    await got
+      .get('https://connect.garmin.com/userprofile-service/userprofile/userProfileBase', {
+        headers: {
+          Authorization: 'Bearer ' + this.session.access_token,
+          Accept: 'application/json, text/plain, */*',
+          'cache-control': 'no-cache',
+          'di-backend': 'connectapi.garmin.com',
+          nk: 'NT',
+          pragma: 'no-cache',
+          priority: 'u=1, i',
+          referer: 'https://connect.garmin.com/modern/home',
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'x-app-ver': '5.9.0.31a',
+          'x-lang': 'de-DE',
+        },
+      })
+      .then((res) => {
+        this.log.debug(JSON.stringify(res.data));
+        if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
+          this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
+          this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
+          this.json2iob.parse('userpreferences', this.userpreferences);
+          this.json2iob.parse('social_profile', this.social_media);
+        }
+      })
+      .catch((error) => {
+        this.log.error(error);
+        error.response && this.log.error(JSON.stringify(error.response.data));
+      });
     this.updateInterval = null;
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
@@ -145,7 +176,6 @@ class Garmin extends utils.Adapter {
       password: this.config.password,
       _csrf: form._csrf,
       embed: 'false',
-      rememberme: 'on',
     };
     if (this.config.mfa) {
       url =
@@ -335,6 +365,7 @@ class Garmin extends utils.Adapter {
   }
 
   async updateDevices() {
+    this.userpreferences;
     const date = new Date().toISOString().split('T')[0];
     const dateMinus10 = new Date(new Date().setDate(new Date().getDate() - 6)).toISOString().split('T')[0];
     const statusArray = [
@@ -500,9 +531,9 @@ class Garmin extends utils.Adapter {
         'Sec-Fetch-Dest': 'document',
       },
     }).catch((error) => {
-      this.log.error('Failed refresh cookies');
-      this.log.error(error);
-      error.response && this.log.error(JSON.stringify(error.response.data));
+      this.log.warn('Failed refresh cookies');
+      this.log.warn(error);
+      error.response && this.log.warn(JSON.stringify(error.response.data));
     });
     await this.requestClient({
       method: 'post',
@@ -511,15 +542,15 @@ class Garmin extends utils.Adapter {
       headers: {
         'Content-Type': 'application/json;charset=utf-8',
         baggage:
-          'sentry-environment=prod,sentry-release=connect%404.73.223,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=c65147be9ffe422a80cea3485df198e7,sentry-sample_rate=1',
+          'sentry-environment=prod,sentry-release=connect%405.9.30,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=72fb803ded6b453a886dec69c8ecb129,sentry-sample_rate=1,sentry-sampled=true',
         Accept: 'application/json, text/plain, */*',
         'Sec-Fetch-Site': 'same-origin',
-        'X-app-ver': '4.73.1.0',
+        'X-app-ver': '5.9.0.31a',
         'Accept-Language': 'en-GB,en;q=0.9',
         'Sec-Fetch-Mode': 'cors',
         Origin: 'https://connect.garmin.com',
         'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
         Referer: 'https://connect.garmin.com/modern/activities',
         NK: 'NT',
         'Sec-Fetch-Dest': 'empty',
@@ -528,12 +559,17 @@ class Garmin extends utils.Adapter {
         refresh_token: this.session.refresh_token,
       },
     })
-      .then((res) => {
+      .then(async (res) => {
         this.log.debug(JSON.stringify(res.data));
         this.session = res.data;
-        this.setState('auth.token', JSON.stringify(res.data), true);
+        await this.setState('auth.token', JSON.stringify(res.data), true);
       })
       .catch((error) => {
+        //check for error status 500
+        if (error.response && error.response.status === 500) {
+          this.log.debug('Error 500 Refresh token ignored');
+          return;
+        }
         this.log.error('Failed refresh token');
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
@@ -549,7 +585,7 @@ class Garmin extends utils.Adapter {
    * Is called when adapter shuts down - callback has to be called under any circumstances!
    * @param {() => void} callback
    */
-  onUnload(callback) {
+  async onUnload(callback) {
     try {
       this.setState('info.connection', false, true);
       this.refreshTimeout && clearTimeout(this.refreshTimeout);
@@ -557,6 +593,11 @@ class Garmin extends utils.Adapter {
       this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
       this.updateInterval && clearInterval(this.updateInterval);
       this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
+      if (this.config.token) {
+        const adapterSettings = await this.getForeignObjectAsync('system.adapter.' + this.namespace);
+        adapterSettings.native.token = null;
+        await this.setForeignObjectAsync('system.adapter.' + this.namespace, adapterSettings);
+      }
       callback();
     } catch (e) {
       callback();
