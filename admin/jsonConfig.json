@@ -128,6 +128,31 @@
       "lg": 3,
       "xs": 12
     },
+    "_captchaManual05": {
+      "type": "staticText",
+      "newLine": true,
+      "label": {
+        "en": "5. Copy under Application -> Cookies the value of JWT_FGP and paste it in the seconde input field",
+        "de": "5. Kopieren Sie unter Anwendung -> Cookies den Wert von JWT_FGP und fügen Sie ihn in das zweite Eingabefeld ein",
+        "ru": "5. Скопируйте значение JWT_FGP из Application -> Cookies и вставьте его во второе поле ввода",
+        "pt": "5. Copie em Aplicativo -> Cookies o valor de JWT_FGP e cole-o no segundo campo de entrada",
+        "nl": "5. Kopieer onder Toepassing -> Cookies de waarde van JWT_FGP en plak deze in het tweede invoerveld",
+        "fr": "5. Copiez sous Application -> Cookies la valeur de JWT_FGP et collez-la dans le deuxième champ de saisie",
+        "it": "5. Copia sotto Applicazione -> Cookie il valore di JWT_FGP e incollalo nel secondo campo di input",
+        "es": "5. Copie bajo Aplicación -> Cookies el valor de JWT_FGP y péguelo en el segundo campo de entrada",
+        "pl": "5. Skopiuj wartość JWT_FGP z Aplikacja -> Ciasteczka i wklej ją w drugie pole wprowadzania",
+        "zh-cn": "5. 在应用程序 -> Cookies下复制JWT_FGP的值，并将其粘贴到第二个输入字段中"
+      }
+    },
+    "_captchaImg2": {
+      "type": "staticImage",
+      "src": "copycookie.png",
+      "sm": 6,
+      "xl": 3,
+      "md": 3,
+      "lg": 3,
+      "xs": 12
+    },
     "_codeUrl": {
       "type": "staticLink",
       "label": {
@@ -164,6 +189,23 @@
 
         "pl": "Żeton",
         "zh-cn": "令牌"
+      }
+    },
+    "fgp": {
+      "type": "text",
+      "newLine": true,
+      "placeholder": "Paste the cookie jwt_fgp here",
+      "label": {
+        "en": "JWT_FGP",
+        "de": "JWT_FGP",
+        "ru": "JWT_FGP",
+        "pt": "JWT_FGP",
+        "nl": "JWT_FGP",
+        "fr": "JWT_FGP",
+        "it": "JWT_FGP",
+        "es": "JWT_FGP",
+        "pl": "JWT_FGP",
+        "zh-cn": "JWT_FGP"
       }
     },
     "interval": {

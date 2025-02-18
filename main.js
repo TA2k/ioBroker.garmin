@@ -13,7 +13,6 @@ const Json2iob = require('json2iob');
 const tough = require('tough-cookie');
 const qs = require('qs');
 const { HttpsCookieAgent } = require('http-cookie-agent/http');
-const { url } = require('inspector');
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -88,6 +87,9 @@ class Garmin extends utils.Adapter {
     } else if (this.config.token) {
       this.log.info('Use settings token');
       this.session = JSON.parse(this.config.token);
+      //set JWT_FGP cookie from config.fgp value on domain .connect.garmin.com and path /
+      const cookieString = 'JWT_FGP=' + this.config.fgp + '; Domain=.connect.garmin.com; Path=/';
+      this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
     }
     if (!this.session || !this.session.access_token) {
       this.log.warn('No token found. Please enter token in the settings');
@@ -515,26 +517,26 @@ class Garmin extends utils.Adapter {
     this.log.debug('Refresh token');
 
     // await this.login();
-    await this.requestClient({
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: 'https://sso.garmin.com/sso/login?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2Factivities&webhost=https%3A%2F%2Fconnect.garmin.com&gateway=true&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&clientId=CAS_CLIENT_DEFAULT',
-      headers: {
-        Host: 'sso.garmin.com',
-        'Sec-Fetch-Site': 'same-site',
-        'Sec-Fetch-Mode': 'navigate',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
-        'Accept-Language': 'en-GB,en;q=0.9',
-        Referer: 'https://sso.garmin.com/',
-        'Sec-Fetch-Dest': 'document',
-      },
-    }).catch((error) => {
-      this.log.warn('Failed refresh cookies');
-      this.log.warn(error);
-      error.response && this.log.warn(JSON.stringify(error.response.data));
-    });
+    // await this.requestClient({
+    //   method: 'get',
+    //   maxBodyLength: Infinity,
+    //   url: 'https://sso.garmin.com/sso/login?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2Factivities&webhost=https%3A%2F%2Fconnect.garmin.com&gateway=true&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&clientId=CAS_CLIENT_DEFAULT',
+    //   headers: {
+    //     Host: 'sso.garmin.com',
+    //     'Sec-Fetch-Site': 'same-site',
+    //     'Sec-Fetch-Mode': 'navigate',
+    //     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    //     'User-Agent':
+    //       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+    //     'Accept-Language': 'en-GB,en;q=0.9',
+    //     Referer: 'https://sso.garmin.com/',
+    //     'Sec-Fetch-Dest': 'document',
+    //   },
+    // }).catch((error) => {
+    //   this.log.warn('Failed refresh cookies');
+    //   this.log.warn(error);
+    //   error.response && this.log.warn(JSON.stringify(error.response.data));
+    // });
     await this.requestClient({
       method: 'post',
       maxBodyLength: Infinity,
@@ -567,17 +569,13 @@ class Garmin extends utils.Adapter {
       .catch((error) => {
         //check for error status 500
         if (error.response && error.response.status === 500) {
-          this.log.debug('Error 500 Refresh token ignored');
+          this.log.error('FGP missmatch. Please update FGP in the settings');
+          this.log.debug(error);
           return;
         }
         this.log.error('Failed refresh token');
         this.log.error(error);
         error.response && this.log.error(JSON.stringify(error.response.data));
-        this.log.info('Re-Login in 60 seconds');
-        this.reLoginTimeout && clearTimeout(this.reLoginTimeout);
-        this.reLoginTimeout = setTimeout(() => {
-          this.login();
-        }, 1000 * 60);
       });
   }
 
@@ -600,6 +598,7 @@ class Garmin extends utils.Adapter {
       }
       callback();
     } catch (e) {
+      this.log.error(e);
       callback();
     }
   }
