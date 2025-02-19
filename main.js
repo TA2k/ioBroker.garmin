@@ -49,6 +49,8 @@ class Garmin extends utils.Adapter {
   async onReady() {
     // Reset the connection indicator during startup
     this.setState('info.connection', false, true);
+
+    this.session = {};
     if (this.config.interval < 0.5) {
       this.log.info('Set interval to minimum 0.5');
       this.config.interval = 0.5;
@@ -56,10 +58,6 @@ class Garmin extends utils.Adapter {
     if (!this.config.username || !this.config.password) {
       this.log.error('Please set username and password in the instance settings');
       return;
-    }
-    const cookieState = await this.getStateAsync('cookie');
-    if (cookieState && cookieState.val) {
-      this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
     }
 
     await this.extendObject('auth', {
@@ -84,11 +82,19 @@ class Garmin extends utils.Adapter {
     if (tokenState && tokenState.val) {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
+      const cookieState = await this.getStateAsync('cookie');
+      if (cookieState && cookieState.val) {
+        this.log.debug('Load cookie');
+        this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
+        // const cookieString =  'JWT_FGP=' + this.cookieJar.store.idx['connect.garmin.com']['/']['JWT_FGP'].value + '; Domain=.connect.garmin.com; Path=/;Secure';
+        // this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
+        await this.sleep(200);
+      }
     } else if (this.config.token) {
       this.log.info('Use settings token');
       this.session = JSON.parse(this.config.token);
       //set JWT_FGP cookie from config.fgp value on domain .connect.garmin.com and path /
-      const cookieString = 'JWT_FGP=' + this.config.fgp + '; Domain=.connect.garmin.com; Path=/';
+      const cookieString = 'JWT_FGP=' + this.config.fgp + '; Domain=.connect.garmin.com; Path=/;Secure';
       this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
     }
     if (!this.session || !this.session.access_token) {
@@ -96,8 +102,14 @@ class Garmin extends utils.Adapter {
       return;
     }
     await this.refreshToken();
+    if (!this.session.access_token) {
+      this.log.error('Failed to login');
+      return;
+    }
     await got
       .get('https://connect.garmin.com/userprofile-service/userprofile/userProfileBase', {
+        cookieJar: this.cookieJar,
+        http2: true,
         headers: {
           Authorization: 'Bearer ' + this.session.access_token,
           Accept: 'application/json, text/plain, */*',
@@ -114,13 +126,8 @@ class Garmin extends utils.Adapter {
         },
       })
       .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-        if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
-          this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
-          this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
-          this.json2iob.parse('userpreferences', this.userpreferences);
-          this.json2iob.parse('social_profile', this.social_media);
-        }
+        this.log.debug(res.body);
+        this.userpreferences = JSON.parse(res.body);
       })
       .catch((error) => {
         this.log.error(error);
@@ -129,7 +136,6 @@ class Garmin extends utils.Adapter {
     this.updateInterval = null;
     this.reLoginTimeout = null;
     this.refreshTokenTimeout = null;
-    this.session = {};
     this.subscribeStates('*');
 
     // this.log.info('Login to Garmin');
@@ -297,17 +303,25 @@ class Garmin extends utils.Adapter {
   }
 
   async getDeviceList() {
-    await this.requestClient({
+    await got('https://connect.garmin.com/device-service/deviceregistration/devices', {
       method: 'get',
-      url: 'https://connect.garmin.com/device-service/deviceregistration/devices',
+
       headers: {
         Authorization: 'Bearer ' + this.session.access_token,
         'DI-Backend': 'connectapi.garmin.com',
         Accept: 'application/json, text/plain, */*',
+        'X-app-ver': '5.9.0.31a',
+        'Accept-Language': 'en-GB,en;q=0.9',
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+
         NK: 'NT',
       },
+      cookieJar: this.cookieJar,
+      http2: true,
     })
       .then(async (res) => {
+        res.data = JSON.parse(res.body);
         this.log.debug(JSON.stringify(res.data));
         if (res.data) {
           this.log.info(`Found ${res.data.length} devices`);
@@ -444,18 +458,23 @@ class Garmin extends utils.Adapter {
     for (const element of statusArray) {
       // const url = element.url.replace("$id", id);
 
-      await this.requestClient({
+      await got({
+        cookieJar: this.cookieJar,
         method: element.method || 'get',
         url: element.url,
         headers: {
-          NK: 'NT',
-          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'accept-language': 'en-GB,en;q=0.9',
+          Accept: 'application/json, text/plain, */*',
+          'X-app-ver': '5.9.0.31a',
+          'Accept-Language': 'en-GB,en;q=0.9',
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+
           Authorization: 'Bearer ' + this.session.access_token,
           'DI-Backend': 'connectapi.garmin.com',
         },
       })
         .then(async (res) => {
+          res.data = JSON.parse(res.body);
           this.log.debug(JSON.stringify(res.data));
           if (!res.data) {
             return;
@@ -513,6 +532,11 @@ class Garmin extends utils.Adapter {
     }
     return returnObject;
   }
+  async sleep(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
   async refreshToken() {
     this.log.debug('Refresh token');
 
@@ -537,40 +561,44 @@ class Garmin extends utils.Adapter {
     //   this.log.warn(error);
     //   error.response && this.log.warn(JSON.stringify(error.response.data));
     // });
-    await this.requestClient({
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'https://connect.garmin.com/services/auth/token/refresh',
-      headers: {
-        'Content-Type': 'application/json;charset=utf-8',
-        baggage:
-          'sentry-environment=prod,sentry-release=connect%405.9.30,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=72fb803ded6b453a886dec69c8ecb129,sentry-sample_rate=1,sentry-sampled=true',
-        Accept: 'application/json, text/plain, */*',
-        'Sec-Fetch-Site': 'same-origin',
-        'X-app-ver': '5.9.0.31a',
-        'Accept-Language': 'en-GB,en;q=0.9',
-        'Sec-Fetch-Mode': 'cors',
-        Origin: 'https://connect.garmin.com',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-        Referer: 'https://connect.garmin.com/modern/activities',
-        NK: 'NT',
-        'Sec-Fetch-Dest': 'empty',
-      },
-      data: {
-        refresh_token: this.session.refresh_token,
-      },
-    })
+
+    await got
+      .post('https://connect.garmin.com/services/auth/token/refresh', {
+        cookieJar: this.cookieJar,
+        http2: true,
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8',
+          baggage:
+            'sentry-environment=prod,sentry-release=connect%405.9.30,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=72fb803ded6b453a886dec69c8ecb129,sentry-sample_rate=1,sentry-sampled=true',
+          Accept: 'application/json, text/plain, */*',
+          'X-app-ver': '5.9.0.31a',
+          'Accept-Language': 'en-GB,en;q=0.9',
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          NK: 'NT',
+        },
+        json: {
+          refresh_token: this.session.refresh_token,
+        },
+      })
       .then(async (res) => {
-        this.log.debug(JSON.stringify(res.data));
-        this.session = res.data;
-        await this.setState('auth.token', JSON.stringify(res.data), true);
+        this.log.debug(JSON.stringify(res.body));
+        // this.session = res.data;
+        this.session = JSON.parse(res.body);
+        await this.setState('auth.token', res.body, true);
+        //set cookie state
+        await this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
       })
       .catch((error) => {
         //check for error status 500
+        //log cookie request header
+        this.log.debug(error.config.headers);
         if (error.response && error.response.status === 500) {
-          this.log.error('FGP missmatch. Please update FGP in the settings');
+          this.log.error('FGP missmatch. Please logout and login in garmin and update FGP in the settings');
           this.log.debug(error);
+          this.setState('info.connection', false, true);
+          this.setState('auth.token', '', true);
+          this.session = {};
           return;
         }
         this.log.error('Failed refresh token');
