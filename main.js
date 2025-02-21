@@ -592,8 +592,8 @@ class Garmin extends utils.Adapter {
       .catch((error) => {
         //check for error status 500
         //log cookie request header
-        this.log.debug(error.config.headers);
-        if (error.response && error.response.status === 500) {
+        this.log.debug(error.request.options.headers);
+        if (error.response && error.response.statusCode === 500) {
           this.log.error('FGP missmatch. Please logout and login in garmin and update FGP in the settings');
           this.log.debug(error);
           this.setState('info.connection', false, true);
