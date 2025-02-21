@@ -94,7 +94,7 @@ class Garmin extends utils.Adapter {
       this.log.info('Use settings token');
       this.session = JSON.parse(this.config.token);
       //set JWT_FGP cookie from config.fgp value on domain .connect.garmin.com and path /
-      const cookieString = 'JWT_FGP=' + this.config.fgp + '; Domain=.connect.garmin.com; Path=/;Secure';
+      const cookieString = 'JWT_FGP=' + this.config.fgp.trim() + '; Domain=.connect.garmin.com; Path=/;Secure';
       this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
     }
     if (!this.session || !this.session.access_token) {
@@ -585,6 +585,7 @@ class Garmin extends utils.Adapter {
         this.log.debug(JSON.stringify(res.body));
         // this.session = res.data;
         this.session = JSON.parse(res.body);
+        this.setState('info.connection', true, true);
         await this.setState('auth.token', res.body, true);
         //set cookie state
         await this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
