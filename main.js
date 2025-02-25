@@ -519,6 +519,11 @@ class Garmin extends utils.Adapter {
   }
   async refreshToken() {
     this.log.debug('Refresh token');
+    //set this.config.fgp as cookie JWT_FGP
+    if (this.config.fgp) {
+      const cookieString = 'JWT_FGP=' + this.config.fgp.trim() + '; Domain=.connect.garmin.com; Path=/;Secure';
+      this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
+    }
 
     // await this.login();
     // await this.requestClient({
@@ -541,7 +546,9 @@ class Garmin extends utils.Adapter {
     //   this.log.warn(error);
     //   error.response && this.log.warn(JSON.stringify(error.response.data));
     // });
-
+    this.log.debug(JSON.stringify(this.cookieJar.toJSON()));
+    this.log.debug(this.session.access_token);
+    this.log.debug(this.session.refresh_token);
     await got
       .post('https://connect.garmin.com/services/auth/token/refresh', {
         cookieJar: this.cookieJar,
@@ -563,8 +570,20 @@ class Garmin extends utils.Adapter {
       .then(async (res) => {
         this.log.debug(JSON.stringify(res.body));
         // this.session = res.data;
-        this.session = JSON.parse(res.body);
+
+        const resJson = JSON.parse(res.body);
+        if (resJson.access_token) {
+          this.session = resJson;
+          try {
+            //extract JWT_FGP cookie from response header
+            this.config.fgp = res.headers['set-cookie'][0].split('JWT_FGP=')[1].split(';')[0];
+          } catch (error) {
+            this.log.error('Failed to extract JWT_FGP cookie');
+          }
+        }
+
         this.setState('info.connection', true, true);
+
         await this.setState('auth.token', res.body, true);
         //set cookie state
         await this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
