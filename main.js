@@ -119,8 +119,7 @@ class Garmin extends utils.Adapter {
           pragma: 'no-cache',
           priority: 'u=1, i',
           referer: 'https://connect.garmin.com/modern/home',
-          'user-agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
           'x-app-ver': '5.9.0.31a',
           'x-lang': 'de-DE',
         },
@@ -143,19 +142,13 @@ class Garmin extends utils.Adapter {
 
     await this.getDeviceList();
     await this.updateDevices();
-    this.updateInterval = setInterval(
-      async () => {
-        await this.updateDevices();
-      },
-      this.config.interval * 60 * 1000,
-    );
+    this.updateInterval = setInterval(async () => {
+      await this.updateDevices();
+    }, this.config.interval * 60 * 1000);
 
-    this.refreshTokenInterval = setInterval(
-      () => {
-        this.refreshToken();
-      },
-      20 * 60 * 1000,
-    );
+    this.refreshTokenInterval = this.setInterval(async () => {
+      await this.refreshToken();
+    }, 13 * 60 * 1000 - 5234);
   }
   async login() {
     const form = await this.requestClient({
@@ -163,8 +156,7 @@ class Garmin extends utils.Adapter {
       url: 'https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false',
       headers: {
         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'user-agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
         'accept-language': 'en-GB,en;q=0.9',
         referer: 'https://connect.garmin.com/',
       },
@@ -202,8 +194,7 @@ class Garmin extends utils.Adapter {
           accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'content-type': 'application/x-www-form-urlencoded',
           'accept-language': 'de-de',
-          'user-agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
+          'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
         },
 
         body: qs.stringify(data),
@@ -255,8 +246,7 @@ class Garmin extends utils.Adapter {
       url: 'https://connect.garmin.com/modern/?ticket=' + ticket,
       headers: {
         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'user-agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
         'accept-language': 'en-GB,en;q=0.9',
       },
     })
@@ -312,8 +302,7 @@ class Garmin extends utils.Adapter {
         Accept: 'application/json, text/plain, */*',
         'X-app-ver': '5.9.0.31a',
         'Accept-Language': 'en-GB,en;q=0.9',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
 
         NK: 'NT',
       },
@@ -387,11 +376,7 @@ class Garmin extends utils.Adapter {
     const statusArray = [
       {
         path: 'usersummary',
-        url:
-          'https://connect.garmin.com/usersummary-service/usersummary/daily/' +
-          this.userpreferences.displayName +
-          '?calendarDate=' +
-          date,
+        url: 'https://connect.garmin.com/usersummary-service/usersummary/daily/' + this.userpreferences.displayName + '?calendarDate=' + date,
         desc: 'User Summary Daily',
       },
       {
@@ -431,11 +416,7 @@ class Garmin extends utils.Adapter {
       },
       {
         path: 'heartrate',
-        url:
-          'https://connect.garmin.com/userstats-service/wellness/daily/' +
-          this.userpreferences.displayName +
-          '?fromDate=' +
-          dateMinus10,
+        url: 'https://connect.garmin.com/userstats-service/wellness/daily/' + this.userpreferences.displayName + '?fromDate=' + dateMinus10,
         desc: 'Resting Heartrate',
       },
       {
@@ -466,8 +447,7 @@ class Garmin extends utils.Adapter {
           Accept: 'application/json, text/plain, */*',
           'X-app-ver': '5.9.0.31a',
           'Accept-Language': 'en-GB,en;q=0.9',
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
 
           Authorization: 'Bearer ' + this.session.access_token,
           'DI-Backend': 'connectapi.garmin.com',
@@ -573,8 +553,7 @@ class Garmin extends utils.Adapter {
           Accept: 'application/json, text/plain, */*',
           'X-app-ver': '5.9.0.31a',
           'Accept-Language': 'en-GB,en;q=0.9',
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
           NK: 'NT',
         },
         json: {
