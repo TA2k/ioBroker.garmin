@@ -96,7 +96,7 @@ class Garmin extends utils.Adapter {
       const cookieState = await this.getStateAsync('cookie');
       if (cookieState && cookieState.val) {
         this.log.debug('Load cookie');
-        this.cookieJar = tough.CookieJar.fromJSON(cookieState.val);
+        this.cookieJar = CookieJar.fromJSON(cookieState.val);
         // const cookieString =  'JWT_FGP=' + this.cookieJar.store.idx['connect.garmin.com']['/']['JWT_FGP'].value + '; Domain=.connect.garmin.com; Path=/;Secure';
         // this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
         await this.sleep(200);
@@ -609,6 +609,7 @@ class Garmin extends utils.Adapter {
           try {
             //extract JWT_FGP cookie from response header
             this.config.fgp = res.headers['set-cookie'][0].split('JWT_FGP=')[1].split(';')[0];
+            //eslint-disable-next-line
           } catch (error) {
             this.log.error('Failed to extract JWT_FGP cookie');
           }
