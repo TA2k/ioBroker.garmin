@@ -10,7 +10,8 @@ const utils = require('@iobroker/adapter-core');
 const axios = require('axios').default;
 const got = require('got').default;
 const Json2iob = require('json2iob');
-const tough = require('tough-cookie');
+const { CookieJar, MemoryCookieStore } = require('tough-cookie');
+
 const qs = require('qs');
 const { HttpsCookieAgent } = require('http-cookie-agent/http');
 
@@ -32,7 +33,17 @@ class Garmin extends utils.Adapter {
     this.deviceArray = [];
 
     this.json2iob = new Json2iob(this);
-    this.cookieJar = new tough.CookieJar();
+    class CustomStore extends MemoryCookieStore {
+      putCookie(cookie, cb) {
+        // Remove expiration before saving
+        cookie.expires = 'Infinity';
+        cookie.maxAge = Infinity;
+        super.putCookie(cookie, cb);
+      }
+    }
+
+    this.cookieJar = new CookieJar(new CustomStore());
+
     this.requestClient = axios.create({
       withCredentials: true,
       httpsAgent: new HttpsCookieAgent({

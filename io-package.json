@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "garmin",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "news": {
+      "0.2.0": {
+        "en": "rework login process",
+        "de": "Login Prozess überarbeitet",
+        "ru": "обновление login process",
+        "pt": "processo de login de rework",
+        "nl": "aanmeldproces herwerken",
+        "fr": "retravailler le processus de connexion",
+        "it": "processo di login",
+        "es": "proceso de inicio de sesión",
+        "pl": "przerabianie procesu logowania",
+        "uk": "процес працевлаштування",
+        "zh-cn": "重新工作登录进程"
+      },
       "0.1.1": {
         "en": "rework relogin to prevent blocking",
         "de": "Login überarbeitet um Blockierung zu verhindern"
