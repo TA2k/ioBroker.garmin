@@ -70,7 +70,6 @@
     "keywords": ["garmin", "connect"],
     "license": "MIT",
     "platform": "Javascript/Node.js",
-    "main": "main.js",
     "icon": "garmin.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/TA2k/ioBroker.garmin/master/admin/garmin.png",
