@@ -171,6 +171,7 @@ class Garmin extends utils.Adapter {
       this.log.debug('Fetched OAuth consumer from S3');
       return data;
     } catch (error) {
+      this.log.debug(error);
       this.log.warn('Failed to fetch OAuth consumer, using fallback');
       return {
         consumer_key: 'fc3e99d2-118c-44b8-8ae3-03370dde24c0',
