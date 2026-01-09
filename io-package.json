@@ -100,8 +100,6 @@
   "native": {
     "username": "",
     "password": "",
-    "token": "",
-    "fgp": "",
     "interval": 30,
     "mfa": "",
     "adhoc": false
@@ -126,18 +124,6 @@
         "read": true,
         "write": false,
         "def": false
-      },
-      "native": {}
-    },
-    {
-      "_id": "cookie",
-      "type": "state",
-      "common": {
-        "role": "state",
-        "name": "Cookie state",
-        "type": "string",
-        "read": true,
-        "write": false
       },
       "native": {}
     }

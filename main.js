@@ -7,13 +7,17 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
+const crypto = require('crypto');
+const OAuth = require('oauth-1.0a');
 const axios = require('axios').default;
 const got = require('got').default;
 const Json2iob = require('json2iob');
 const { CookieJar, MemoryCookieStore } = require('tough-cookie');
 
-const qs = require('qs');
 const { HttpsCookieAgent } = require('http-cookie-agent/http');
+
+const UA_IOS = 'GCM-iOS-5.7.2.1';
+const DOMAIN = 'garmin.com';
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
@@ -93,24 +97,16 @@ class Garmin extends utils.Adapter {
     if (tokenState && tokenState.val) {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
-      const cookieState = await this.getStateAsync('cookie');
-      if (cookieState && cookieState.val) {
-        this.log.debug('Load cookie');
-        this.cookieJar = CookieJar.fromJSON(cookieState.val);
-        // const cookieString =  'JWT_FGP=' + this.cookieJar.store.idx['connect.garmin.com']['/']['JWT_FGP'].value + '; Domain=.connect.garmin.com; Path=/;Secure';
-        // this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
-        await this.sleep(200);
-      }
-    } else if (this.config.token) {
-      this.log.info('Use settings token');
-      this.session = JSON.parse(this.config.token);
-      //set JWT_FGP cookie from config.fgp value on domain .connect.garmin.com and path /
-      const cookieString = 'JWT_FGP=' + this.config.fgp.trim() + '; Domain=.connect.garmin.com; Path=/;Secure';
-      this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
     }
+
+    // If no session or no access token, perform full login
     if (!this.session || !this.session.access_token) {
-      this.log.warn('No token found. Please enter token in the settings');
-      return;
+      this.log.info('No token found, performing login...');
+      const loginSuccess = await this.performFullLogin();
+      if (!loginSuccess) {
+        this.log.error('Login failed');
+        return;
+      }
     }
     await this.refreshToken();
     if (!this.session.access_token) {
@@ -168,149 +164,316 @@ class Garmin extends utils.Adapter {
       13 * 60 * 1000 - 5234,
     );
   }
-  async login() {
-    const form = await this.requestClient({
-      method: 'get',
-      url: 'https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false',
-      headers: {
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'user-agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
-        'accept-language': 'en-GB,en;q=0.9',
-        referer: 'https://connect.garmin.com/',
-      },
-    })
-      .then((res) => {
-        this.log.debug(JSON.stringify(res.data));
-        return this.extractHidden(res.data);
-      })
-      .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
-      });
-    let url =
-      'https://sso.garmin.com/sso/signin?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false';
-    let data = {
-      username: this.config.username,
-      password: this.config.password,
-      _csrf: form._csrf,
-      embed: 'false',
-    };
-    if (this.config.mfa) {
-      url =
-        'https://sso.garmin.com/sso/verifyMFA/loginEnterMfaCode?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&webhost=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&source=https%3A%2F%2Fconnect.garmin.com%2Fsignin%2F&redirectAfterAccountLoginUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&redirectAfterAccountCreationUrl=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F&gauthHost=https%3A%2F%2Fsso.garmin.com%2Fsso&locale=en_GB&id=gauth-widget&cssUrl=https%3A%2F%2Fconnect.garmin.com%2Fgauth-custom-v1.2-min.css&privacyStatementUrl=https%3A%2F%2Fwww.garmin.com%2Fen-GB%2Fprivacy%2Fconnect%2F&clientId=GarminConnect&rememberMeShown=true&rememberMeChecked=false&createAccountShown=true&openCreateAccount=false&displayNameShown=false&consumeServiceTicket=false&initialFocus=true&embedWidget=false&socialEnabled=false&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&generateNoServiceTicket=false&globalOptInShown=true&globalOptInChecked=false&mobile=false&connectLegalTerms=true&showTermsOfUse=false&showPrivacyPolicy=false&showConnectLegalAge=false&locationPromptShown=true&showPassword=true&useCustomHeader=false&mfaRequired=false&performMFACheck=false&rememberMyBrowserShown=true&rememberMyBrowserChecked=false';
-      data = {
-        'mfa-code': this.config.mfa,
-        embed: 'false',
-        fromPage: 'setupEnterMfaCode',
+  async fetchOAuthConsumer() {
+    try {
+      const res = await fetch('https://thegarth.s3.amazonaws.com/oauth_consumer.json');
+      const data = await res.json();
+      this.log.debug('Fetched OAuth consumer from S3');
+      return data;
+    } catch (error) {
+      this.log.warn('Failed to fetch OAuth consumer, using fallback');
+      return {
+        consumer_key: 'fc3e99d2-118c-44b8-8ae3-03370dde24c0',
+        consumer_secret: 'E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF',
       };
     }
+  }
 
-    const ticket = await got
-      .post(url, {
-        http2: true,
-        headers: {
-          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'content-type': 'application/x-www-form-urlencoded',
-          'accept-language': 'de-de',
-          'user-agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
-        },
-
-        body: qs.stringify(data),
-      })
-      .then((res) => {
-        res.data = res.body;
-        this.log.debug(JSON.stringify(res.data));
-        const body = res.data;
-        try {
-          if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
-            this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
-            this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
-            this.json2iob.parse('userpreferences', this.userpreferences);
-            this.json2iob.parse('social_profile', this.social_media);
-          }
-        } catch (error) {
-          this.log.error(error);
-        }
-        if (res.data.includes('submit-mfa-verification-code-form')) {
-          this.log.info('MFA required. Please enter MFA in the settings');
-          return;
-        }
-        return body.split('ticket=')[1].split('";')[0];
-      })
-      .catch((error) => {
-        if (error.response && error.response.status === 403) {
-          this.log.error('Please update node to version 18 or higher');
-          return;
-        }
-        this.log.error('Failed ticket please check username and password');
-        this.log.error(error);
-        error.response && this.log.debug(JSON.stringify(error.response.data));
-        if (this.config.mfa) {
-          const adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
-          this.getForeignObject(adapterConfig, (error, obj) => {
-            if (obj && obj.native && obj.native.mfa) {
-              obj.native.mfa = '';
-              this.setForeignObject(adapterConfig, obj);
-            }
-          });
-        }
-      });
-
-    if (!ticket) {
-      return;
-    }
-    const result = await this.requestClient({
-      method: 'get',
-      url: 'https://connect.garmin.com/modern/?ticket=' + ticket,
-      headers: {
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'user-agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
-        'accept-language': 'en-GB,en;q=0.9',
+  createOAuthClient(consumerKey, consumerSecret) {
+    return OAuth({
+      consumer: { key: consumerKey, secret: consumerSecret },
+      signature_method: 'HMAC-SHA1',
+      hash_function(base_string, key) {
+        return crypto.createHmac('sha1', key).update(base_string).digest('base64');
       },
-    })
-      .then(async (res) => {
-        this.log.debug(JSON.stringify(res.data));
+    });
+  }
 
-        this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
-        try {
-          if (res.data.includes('window.VIEWER_USERPREFERENCES')) {
-            this.userpreferences = JSON.parse(res.data.split('window.VIEWER_USERPREFERENCES = ')[1].split(';\n')[0]);
-            this.social_media = JSON.parse(res.data.split('window.VIEWER_SOCIAL_PROFILE = ')[1].split(';\n')[0]);
-            this.json2iob.parse('userpreferences', this.userpreferences);
-            this.json2iob.parse('social_profile', this.social_media);
+  async fetchWithCookies(url, options = {}) {
+    const cookieString = this.ssoCookieJar.getCookieString(url);
+    const headers = {
+      ...options.headers,
+      ...(cookieString ? { Cookie: cookieString } : {}),
+    };
+
+    const res = await fetch(url, { ...options, headers, redirect: 'manual' });
+    this.ssoCookieJar.setCookie(res.headers.get('set-cookie'), url);
+
+    const setCookies = res.headers.getSetCookie?.() || [];
+    for (const c of setCookies) {
+      this.ssoCookieJar.setCookie(c, url);
+    }
+
+    return res;
+  }
+
+  async login() {
+    this.log.info('Starting SSO login...');
+
+    // Simple cookie jar for SSO
+    this.ssoCookieJar = {
+      cookies: {},
+      setCookie(setCookieHeader, url) {
+        if (!setCookieHeader) return;
+        const headers = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+        const domain = new URL(url).hostname;
+        for (const header of headers) {
+          const [cookiePart] = header.split(';');
+          const [name, value] = cookiePart.split('=');
+          if (name && value) {
+            if (!this.cookies[domain]) this.cookies[domain] = {};
+            this.cookies[domain][name.trim()] = value.trim();
           }
-        } catch (error) {
-          this.log.error(error);
         }
-        this.setState('info.connection', true, true);
-        await this.requestClient({
-          method: 'post',
-          url: 'https://connect.garmin.com/modern/di-oauth/exchange',
-          headers: {
-            accept: 'application/json, text/plain, */*',
-            'x-app-ver': '4.60.2.0',
-            NK: 'NT',
-          },
-        })
-          .then((res) => {
-            this.log.debug(JSON.stringify(res.data));
-            this.session = res.data;
-          })
-          .catch((error) => {
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-        return true;
-      })
-      .catch((error) => {
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+      },
+      getCookieString(url) {
+        const domain = new URL(url).hostname;
+        const parts = domain.split('.');
+        const cookies = [];
+        for (let i = 0; i < parts.length - 1; i++) {
+          const d = parts.slice(i).join('.');
+          if (this.cookies[d]) {
+            for (const [name, value] of Object.entries(this.cookies[d])) {
+              cookies.push(`${name}=${value}`);
+            }
+          }
+        }
+        return cookies.join('; ');
+      },
+    };
+
+    const SSO = `https://sso.${DOMAIN}/sso`;
+    const SSO_EMBED = `${SSO}/embed`;
+    const SSO_EMBED_PARAMS = new URLSearchParams({
+      id: 'gauth-widget',
+      embedWidget: 'true',
+      gauthHost: SSO,
+    });
+    const SIGNIN_PARAMS = new URLSearchParams({
+      id: 'gauth-widget',
+      embedWidget: 'true',
+      gauthHost: SSO_EMBED,
+      service: SSO_EMBED,
+      source: SSO_EMBED,
+      redirectAfterAccountLoginUrl: SSO_EMBED,
+      redirectAfterAccountCreationUrl: SSO_EMBED,
+    });
+
+    // Step 1: Set cookies
+    this.log.debug('Setting SSO cookies...');
+    await this.fetchWithCookies(`${SSO}/embed?${SSO_EMBED_PARAMS}`, {
+      headers: { 'User-Agent': UA_IOS },
+    });
+
+    // Step 2: Get CSRF token
+    this.log.debug('Getting CSRF token...');
+    const signinPageRes = await this.fetchWithCookies(`${SSO}/signin?${SIGNIN_PARAMS}`, {
+      headers: {
+        'User-Agent': UA_IOS,
+        Referer: `${SSO}/embed?${SSO_EMBED_PARAMS}`,
+      },
+    });
+    const signinPageHtml = await signinPageRes.text();
+
+    const csrfMatch = signinPageHtml.match(/name="_csrf"\s+value="(.+?)"/);
+    if (!csrfMatch) {
+      this.log.error('CSRF token not found');
+      this.log.debug('Response: ' + signinPageHtml.substring(0, 500));
+      return null;
+    }
+    const csrfToken = csrfMatch[1];
+
+    // Step 3: Submit login
+    this.log.debug('Submitting login...');
+    const loginRes = await this.fetchWithCookies(`${SSO}/signin?${SIGNIN_PARAMS}`, {
+      method: 'POST',
+      headers: {
+        'User-Agent': UA_IOS,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
+      },
+      body: new URLSearchParams({
+        username: this.config.username,
+        password: this.config.password,
+        embed: 'true',
+        _csrf: csrfToken,
+      }),
+    });
+
+    const loginHtml = await loginRes.text();
+    const titleMatch = loginHtml.match(/<title>(.+?)<\/title>/);
+    const title = titleMatch ? titleMatch[1] : '';
+    this.log.debug('Response title: ' + title);
+
+    // Handle MFA
+    if (title.includes('MFA')) {
+      this.log.info('MFA required. Please enter MFA code in the settings');
+      if (!this.config.mfa) {
+        return null;
+      }
+
+      const mfaCsrfMatch = loginHtml.match(/name="_csrf"\s+value="(.+?)"/);
+      const mfaCsrf = mfaCsrfMatch ? mfaCsrfMatch[1] : csrfToken;
+
+      this.log.debug('Submitting MFA code...');
+      const mfaRes = await this.fetchWithCookies(`${SSO}/verifyMFA/loginEnterMfaCode?${SIGNIN_PARAMS}`, {
+        method: 'POST',
+        headers: {
+          'User-Agent': UA_IOS,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
+        },
+        body: new URLSearchParams({
+          'mfa-code': this.config.mfa,
+          embed: 'true',
+          _csrf: mfaCsrf,
+          fromPage: 'setupEnterMfaCode',
+        }),
       });
 
-    return result;
+      const mfaHtml = await mfaRes.text();
+      const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
+      const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
+      this.log.debug('MFA Response title: ' + mfaTitle);
+
+      if (mfaTitle !== 'Success') {
+        this.log.error('MFA verification failed');
+        // Clear MFA code from settings
+        const adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
+        this.getForeignObject(adapterConfig, (error, obj) => {
+          if (obj && obj.native && obj.native.mfa) {
+            obj.native.mfa = '';
+            this.setForeignObject(adapterConfig, obj);
+          }
+        });
+        return null;
+      }
+
+      const ticketMatch = mfaHtml.match(/embed\?ticket=([^"]+)"/);
+      if (ticketMatch) {
+        return ticketMatch[1];
+      }
+    }
+
+    if (title !== 'Success') {
+      this.log.error('Login failed. Check username and password.');
+      this.log.debug('HTML: ' + loginHtml.substring(0, 500));
+      return null;
+    }
+
+    // Extract ticket
+    const ticketMatch = loginHtml.match(/embed\?ticket=([^"]+)"/);
+    if (!ticketMatch) {
+      this.log.error('Ticket not found in response');
+      return null;
+    }
+
+    this.log.info('SSO Login successful');
+    return ticketMatch[1];
+  }
+
+  async getOAuth1Token(ticket) {
+    this.log.debug('Getting OAuth1 token...');
+
+    const consumer = await this.fetchOAuthConsumer();
+    this.oauth = this.createOAuthClient(consumer.consumer_key, consumer.consumer_secret);
+
+    const loginUrl = `https://sso.${DOMAIN}/sso/embed`;
+    const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/preauthorized?ticket=${ticket}&login-url=${encodeURIComponent(loginUrl)}&accepts-mfa-tokens=true`;
+
+    const request_data = { url, method: 'GET' };
+    const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data));
+
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': UA_IOS,
+        ...authHeader,
+      },
+    });
+
+    this.log.debug('OAuth1 Status: ' + res.status);
+
+    if (res.ok) {
+      const text = await res.text();
+      const params = new URLSearchParams(text);
+      const oauth1Token = {
+        oauth_token: params.get('oauth_token'),
+        oauth_token_secret: params.get('oauth_token_secret'),
+        mfa_token: params.get('mfa_token'),
+      };
+      this.log.debug('OAuth1 Token: ' + (oauth1Token.oauth_token ? 'OK' : 'MISSING'));
+      return oauth1Token;
+    } else {
+      const text = await res.text();
+      this.log.error('OAuth1 Error: ' + text.substring(0, 300));
+    }
+    return null;
+  }
+
+  async exchangeOAuth2Token(oauth1Token) {
+    this.log.debug('Exchanging for OAuth2 token...');
+
+    const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/exchange/user/2.0`;
+
+    const request_data = { url, method: 'POST' };
+    const token = {
+      key: oauth1Token.oauth_token,
+      secret: oauth1Token.oauth_token_secret,
+    };
+    const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data, token));
+
+    const body = oauth1Token.mfa_token ? `mfa_token=${oauth1Token.mfa_token}` : '';
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'User-Agent': UA_IOS,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...authHeader,
+      },
+      body: body,
+    });
+
+    this.log.debug('OAuth2 Status: ' + res.status);
+
+    if (res.ok) {
+      const oauth2Token = await res.json();
+      oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
+      oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
+      this.log.debug('OAuth2 Token: OK');
+      return oauth2Token;
+    } else {
+      const text = await res.text();
+      this.log.error('OAuth2 Error: ' + text.substring(0, 500));
+    }
+    return null;
+  }
+
+  async performFullLogin() {
+    const ticket = await this.login();
+    if (!ticket) {
+      this.log.error('Login failed - no ticket');
+      return false;
+    }
+
+    const oauth1Token = await this.getOAuth1Token(ticket);
+    if (!oauth1Token) {
+      this.log.error('OAuth1 token exchange failed');
+      return false;
+    }
+
+    const oauth2Token = await this.exchangeOAuth2Token(oauth1Token);
+    if (!oauth2Token) {
+      this.log.error('OAuth2 token exchange failed');
+      return false;
+    }
+
+    this.session = oauth2Token;
+    await this.setState('auth.token', JSON.stringify(this.session), true);
+    this.setState('info.connection', true, true);
+
+    this.log.info('Full login successful');
+    return true;
   }
 
   async getDeviceList() {
@@ -549,94 +712,63 @@ class Garmin extends utils.Adapter {
     });
   }
   async refreshToken() {
-    this.log.debug('Refresh token');
-    //set this.config.fgp as cookie JWT_FGP
-    if (this.config.fgp) {
-      const cookieString = 'JWT_FGP=' + this.config.fgp.trim() + '; Domain=.connect.garmin.com; Path=/;Secure';
-      this.cookieJar.setCookieSync(cookieString, 'https://connect.garmin.com');
+    this.log.debug('Refreshing OAuth2 token...');
+
+    if (!this.session || !this.session.refresh_token) {
+      this.log.warn('No refresh token available, performing full login');
+      await this.performFullLogin();
+      return;
     }
 
-    // await this.login();
-    // await this.requestClient({
-    //   method: 'get',
-    //   maxBodyLength: Infinity,
-    //   url: 'https://sso.garmin.com/sso/login?service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2Factivities&webhost=https%3A%2F%2Fconnect.garmin.com&gateway=true&generateExtraServiceTicket=true&generateTwoExtraServiceTickets=true&clientId=CAS_CLIENT_DEFAULT',
-    //   headers: {
-    //     Host: 'sso.garmin.com',
-    //     'Sec-Fetch-Site': 'same-site',
-    //     'Sec-Fetch-Mode': 'navigate',
-    //     Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    //     'User-Agent':
-    //       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
-    //     'Accept-Language': 'en-GB,en;q=0.9',
-    //     Referer: 'https://sso.garmin.com/',
-    //     'Sec-Fetch-Dest': 'document',
-    //   },
-    // }).catch((error) => {
-    //   this.log.warn('Failed refresh cookies');
-    //   this.log.warn(error);
-    //   error.response && this.log.warn(JSON.stringify(error.response.data));
-    // });
-    this.log.debug(JSON.stringify(this.cookieJar.toJSON()));
-    this.log.debug(this.session.access_token);
-    this.log.debug(this.session.refresh_token);
-    await got
-      .post('https://connect.garmin.com/services/auth/token/refresh', {
-        cookieJar: this.cookieJar,
-        http2: true,
+    // Check if refresh token is expired
+    if (this.session.refresh_token_expires_at && Date.now() / 1000 > this.session.refresh_token_expires_at) {
+      this.log.info('Refresh token expired, performing full login');
+      await this.performFullLogin();
+      return;
+    }
+
+    try {
+      const consumer = await this.fetchOAuthConsumer();
+      if (!this.oauth) {
+        this.oauth = this.createOAuthClient(consumer.consumer_key, consumer.consumer_secret);
+      }
+
+      const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/exchange/user/2.0`;
+      const request_data = { url, method: 'POST' };
+      const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data));
+
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/json;charset=utf-8',
-          baggage:
-            'sentry-environment=prod,sentry-release=connect%405.9.30,sentry-public_key=f0377f25d5534ad589ab3a9634f25e71,sentry-trace_id=72fb803ded6b453a886dec69c8ecb129,sentry-sample_rate=1,sentry-sampled=true',
-          Accept: 'application/json, text/plain, */*',
-          'X-app-ver': '5.9.0.31a',
-          'Accept-Language': 'en-GB,en;q=0.9',
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-          NK: 'NT',
+          'User-Agent': UA_IOS,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          ...authHeader,
         },
-        json: {
-          refresh_token: this.session.refresh_token,
-        },
-      })
-      .then(async (res) => {
-        this.log.debug(JSON.stringify(res.body));
-        // this.session = res.data;
-
-        const resJson = JSON.parse(res.body);
-        if (resJson.access_token) {
-          this.session = resJson;
-          try {
-            //extract JWT_FGP cookie from response header
-            this.config.fgp = res.headers['set-cookie'][0].split('JWT_FGP=')[1].split(';')[0];
-            //eslint-disable-next-line
-          } catch (error) {
-            this.log.error('Failed to extract JWT_FGP cookie');
-          }
-        }
-
-        this.setState('info.connection', true, true);
-
-        await this.setState('auth.token', res.body, true);
-        //set cookie state
-        await this.setState('cookie', JSON.stringify(this.cookieJar.toJSON()), true);
-      })
-      .catch((error) => {
-        //check for error status 500
-        //log cookie request header
-        this.log.debug(error.request.options.headers);
-        if (error.response && error.response.statusCode === 500) {
-          this.log.error('FGP missmatch. Please logout and login in garmin and update FGP in the settings');
-          this.log.debug(error);
-          this.setState('info.connection', false, true);
-          this.setState('auth.token', '', true);
-          this.session = {};
-          return;
-        }
-        this.log.error('Failed refresh token');
-        this.log.error(error);
-        error.response && this.log.error(JSON.stringify(error.response.data));
+        body: `refresh_token=${this.session.refresh_token}`,
       });
+
+      this.log.debug('Refresh Status: ' + res.status);
+
+      if (res.ok) {
+        const oauth2Token = await res.json();
+        oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
+        oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
+
+        this.session = oauth2Token;
+        await this.setState('auth.token', JSON.stringify(this.session), true);
+        this.setState('info.connection', true, true);
+        this.log.debug('Token refreshed successfully');
+      } else {
+        const text = await res.text();
+        this.log.warn('Token refresh failed: ' + text);
+        this.log.info('Performing full login...');
+        await this.performFullLogin();
+      }
+    } catch (error) {
+      this.log.error('Refresh token error: ' + error);
+      this.log.info('Performing full login...');
+      await this.performFullLogin();
+    }
   }
 
   /**

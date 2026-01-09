@@ -5,227 +5,62 @@
     "username": {
       "type": "text",
       "label": {
-        "en": "App Email",
-        "de": "App-E-Mail",
-        "ru": "Электронная почта приложения",
-        "pt": "Email do aplicativo",
-        "nl": "App-e-mail",
-        "fr": "Courriel de l'application",
-        "it": "E-mail dell'app",
-        "es": "Correo electrónico de la aplicación",
-        "pl": "E-mail aplikacji",
-        "zh-cn": "应用电子邮件"
+        "en": "Garmin Email",
+        "de": "Garmin E-Mail",
+        "ru": "Электронная почта Garmin",
+        "pt": "Email Garmin",
+        "nl": "Garmin e-mail",
+        "fr": "Courriel Garmin",
+        "it": "E-mail Garmin",
+        "es": "Correo electrónico Garmin",
+        "pl": "E-mail Garmin",
+        "zh-cn": "Garmin电子邮件"
       },
       "newLine": true,
-      "sm": 3
+      "sm": 6
     },
     "password": {
       "type": "password",
       "newLine": true,
       "repeat": false,
       "visible": true,
-      "sm": 3,
+      "sm": 6,
       "label": {
-        "en": "App Password",
-        "de": "App-Passwort",
-        "ru": "Пароль приложения",
-        "pt": "Senha de app",
-        "nl": "App-wachtwoord",
-        "fr": "Mot de passe de l'application",
-        "it": "Password dell'app",
-        "es": "Contraseña de la aplicación",
-        "pl": "Hasło do aplikacji",
-        "zh-cn": "应用密码"
+        "en": "Garmin Password",
+        "de": "Garmin Passwort",
+        "ru": "Пароль Garmin",
+        "pt": "Senha Garmin",
+        "nl": "Garmin wachtwoord",
+        "fr": "Mot de passe Garmin",
+        "it": "Password Garmin",
+        "es": "Contraseña Garmin",
+        "pl": "Hasło Garmin",
+        "zh-cn": "Garmin密码"
       }
     },
     "mfa": {
       "type": "text",
       "label": {
-        "en": "MFA-Code",
-        "de": "MFA-Code",
-        "ru": "МФА-Код",
-        "pt": "MFA-Code",
-        "nl": "MFA-Code",
-        "fr": "Code MFA",
-        "it": "MFA-Code",
-        "es": "MFA-Code",
-        "pl": "MFA-Code",
-        "uk": "МФА-Код",
-        "zh-cn": "MFA-Code"
+        "en": "MFA Code (only if required)",
+        "de": "MFA-Code (nur wenn erforderlich)",
+        "ru": "МФА-Код (только при необходимости)",
+        "pt": "Código MFA (apenas se necessário)",
+        "nl": "MFA-code (alleen indien nodig)",
+        "fr": "Code MFA (uniquement si nécessaire)",
+        "it": "Codice MFA (solo se richiesto)",
+        "es": "Código MFA (solo si es necesario)",
+        "pl": "Kod MFA (tylko jeśli wymagane)",
+        "uk": "МФА-Код (тільки якщо потрібно)",
+        "zh-cn": "MFA代码（仅在需要时）"
       },
       "newLine": true,
       "sm": 3
-    },
-    "_captchaManual01": {
-      "type": "staticText",
-      "newLine": true,
-      "label": {
-        "en": "1. Open the Url below and login with your account",
-        "de": "1. Öffnen Sie die unten stehende URL und melden Sie sich mit Ihrem Konto an",
-        "ru": "1. Откройте URL ниже и войдите в свою учетную запись",
-        "pt": "1. Abra a URL abaixo e faça login com sua conta",
-        "nl": "1. Open de onderstaande URL en log in met uw account",
-        "fr": "1. Ouvrez l'URL ci-dessous et connectez-vous avec votre compte",
-        "it": "1. Apri l'URL qui sotto e accedi con il tuo account",
-        "es": "1. Abra la URL a continuación e inicie sesión con su cuenta",
-        "pl": "1. Otwórz poniższy URL i zaloguj się na swoje konto",
-        "zh-cn": "1. 打开下面的URL并使用您的帐户登录"
-      }
-    },
-    "_captchaManual02": {
-      "type": "staticText",
-      "newLine": true,
-      "label": {
-        "en": "2. Open Developer Console F12 or Option + Command + I",
-        "de": "2. Öffnen Sie die Entwicklerkonsole F12 oder Option + Command + I",
-        "ru": "2. Откройте консоль разработчика F12 или Option + Command + I",
-        "pt": "2. Abra o Console do Desenvolvedor F12 ou Option + Command + I",
-        "nl": "2. Open de ontwikkelaarsconsole F12 of Option + Command + I",
-        "fr": "2. Ouvrez la console de développement F12 ou Option + Command + I",
-        "it": "2. Apri la Console degli sviluppatori F12 o Option + Command + I",
-        "es": "2. Abra la Consola de Desarrollador F12 o Option + Command + I",
-        "pl": "2. Otwórz konsolę deweloperską F12 lub Option + Command + I",
-        "zh-cn": "2. 打开开发者控制台 F12 或 Option + Command + I"
-      }
-    },
-    "_captchaManual03": {
-      "type": "staticText",
-      "newLine": true,
-      "label": {
-        "en": "3. Enter the command: copy(localStorage.getItem('token')) in the console",
-        "de": "3. Geben Sie den Befehl ein: copy(localStorage.getItem('token')) in die Konsole ein",
-        "ru": "3. Введите команду: copy(localStorage.getItem('token')) в консоли",
-        "pt": "3. Digite o comando: copy(localStorage.getItem('token')) no console",
-        "nl": "3. Voer het commando in: copy(localStorage.getItem('token')) in de console",
-        "fr": "3. Entrez la commande: copy(localStorage.getItem('token')) dans la console",
-        "it": "3. Inserisci il comando: copy(localStorage.getItem('token')) nella console",
-        "es": "3. Ingrese el comando: copy(localStorage.getItem('token')) en la consola",
-        "pl": "3. Wprowadź polecenie: copy(localStorage.getItem('token')) w konsoli",
-        "zh-cn": "3. 在控制台中输入命令：copy(localStorage.getItem('token'))"
-      }
-    },
-    "_captchaManual04": {
-      "type": "staticText",
-      "newLine": true,
-      "label": {
-        "en": "4. Paste the content of the clipboard into the input field below",
-        "de": "4. Fügen Sie den Inhalt der Zwischenablage in das Eingabefeld unten ein",
-        "ru": "4. Вставьте содержимое буфера обмена в поле ввода ниже",
-        "pt": "4. Cole o conteúdo da área de transferência no campo de entrada abaixo",
-        "nl": "4. Plak de inhoud van het klembord in het onderstaande invoerveld",
-        "fr": "4. Collez le contenu du presse-papiers dans le champ de saisie ci-dessous",
-        "it": "4. Incolla il contenuto degli appunti nel campo di input sottostante",
-        "es": "4. Pegue el contenido del portapapeles en el campo de entrada a continuación",
-        "pl": "4. Wklej zawartość schowka do pola wprowadzania poniżej",
-        "zh-cn": "4. 将剪贴板的内容粘贴到下面的输入字段中"
-      }
-    },
-    "_captchaImg": {
-      "type": "staticImage",
-      "src": "copyurl.png",
-      "sm": 6,
-      "xl": 3,
-      "md": 3,
-      "lg": 3,
-      "xs": 12
-    },
-    "_captchaManual05": {
-      "type": "staticText",
-      "newLine": true,
-      "label": {
-        "en": "5. Copy under Application -> Cookies the value of JWT_FGP and paste it in the seconde input field",
-        "de": "5. Kopieren Sie unter Anwendung -> Cookies den Wert von JWT_FGP und fügen Sie ihn in das zweite Eingabefeld ein",
-        "ru": "5. Скопируйте значение JWT_FGP из Application -> Cookies и вставьте его во второе поле ввода",
-        "pt": "5. Copie em Aplicativo -> Cookies o valor de JWT_FGP e cole-o no segundo campo de entrada",
-        "nl": "5. Kopieer onder Toepassing -> Cookies de waarde van JWT_FGP en plak deze in het tweede invoerveld",
-        "fr": "5. Copiez sous Application -> Cookies la valeur de JWT_FGP et collez-la dans le deuxième champ de saisie",
-        "it": "5. Copia sotto Applicazione -> Cookie il valore di JWT_FGP e incollalo nel secondo campo di input",
-        "es": "5. Copie bajo Aplicación -> Cookies el valor de JWT_FGP y péguelo en el segundo campo de entrada",
-        "pl": "5. Skopiuj wartość JWT_FGP z Aplikacja -> Ciasteczka i wklej ją w drugie pole wprowadzania",
-        "zh-cn": "5. 在应用程序 -> Cookies下复制JWT_FGP的值，并将其粘贴到第二个输入字段中"
-      }
-    },
-    "_captchaImg2": {
-      "type": "staticImage",
-      "src": "copycookie.png",
-      "sm": 6,
-      "xl": 3,
-      "md": 3,
-      "lg": 3,
-      "xs": 12
-    },
-    "_codeUrl": {
-      "type": "staticLink",
-      "label": {
-        "en": "Garmin Login Url Click here",
-        "de": "Garmin Login Url Hier klicken",
-        "ru": "Garmin Login Url Нажмите здесь",
-        "pt": "Garmin Login Url Clique aqui",
-        "nl": "Garmin Login Url Klik hier",
-        "fr": "Garmin Login Url Cliquez ici",
-        "it": "Garmin Login Url Clicca qui",
-        "es": "Garmin Login Url Haga clic aquí",
-        "pl": "Garmin Login Url Kliknij tutaj",
-        "zh-cn": "Garmin登录网址点击这里"
-      },
-      "href": "https://connect.garmin.com/modern/home",
-      "target": "_blank",
-      "icon": "warning",
-      "variant": "contained",
-      "button": true,
-      "color": "secondary",
-      "newLine": true,
-      "style": {
-        "justifyContent": "flex-start !important",
-        "color": "red !important"
-      },
-      "sm": 6,
-      "xl": 3,
-      "md": 3,
-      "lg": 3,
-      "xs": 12
-    },
-
-    "token": {
-      "type": "text",
-      "newLine": true,
-      "placeholder": "Paste the token here",
-      "label": {
-        "en": "Token",
-        "de": "Token",
-        "ru": "Токен",
-        "pt": "Token",
-        "nl": "Token",
-        "fr": "Jeton",
-        "it": "Gettone",
-        "es": "Token",
-
-        "pl": "Żeton",
-        "zh-cn": "令牌"
-      }
-    },
-    "fgp": {
-      "type": "text",
-      "newLine": true,
-      "placeholder": "Paste the cookie jwt_fgp here",
-      "label": {
-        "en": "JWT_FGP",
-        "de": "JWT_FGP",
-        "ru": "JWT_FGP",
-        "pt": "JWT_FGP",
-        "nl": "JWT_FGP",
-        "fr": "JWT_FGP",
-        "it": "JWT_FGP",
-        "es": "JWT_FGP",
-        "pl": "JWT_FGP",
-        "zh-cn": "JWT_FGP"
-      }
     },
     "interval": {
       "type": "number",
       "newLine": true,
       "min": 1,
-      "sm": 2,
+      "sm": 3,
       "label": {
         "en": "Update interval (in minutes)",
         "de": "Aktualisierungsintervall (in Minuten)",
@@ -242,19 +77,19 @@
     "adhoc": {
       "type": "checkbox",
       "newLine": true,
-      "sm": 2,
+      "sm": 6,
       "label": {
-        "en": "Fetch Adhoc and Personal records ",
-        "de": "Fetch Adhoc und Personal records",
-        "ru": "Fetch Adhoc и Личные записи",
-        "pt": "Fetch Adhoc e registros pessoais",
-        "nl": "Haal Adhoc en Persoonlijke gegevens",
-        "fr": "Fetch Adhoc et les dossiers personnels",
-        "it": "Registrazione Adhoc e Personal records",
-        "es": "Registros Fetch Adhoc y Personal",
-        "pl": "Fetch Adhoc and Personal records",
-        "uk": "Fetch Adhoc та особисті записи",
-        "zh-cn": "Fetch Adhoc和个人记录"
+        "en": "Fetch Adhoc and Personal records",
+        "de": "Adhoc und Personal records abrufen",
+        "ru": "Получить Adhoc и Личные записи",
+        "pt": "Buscar Adhoc e registros pessoais",
+        "nl": "Haal Adhoc en Persoonlijke gegevens op",
+        "fr": "Récupérer Adhoc et les dossiers personnels",
+        "it": "Recupera Adhoc e Personal records",
+        "es": "Obtener registros Adhoc y Personal",
+        "pl": "Pobierz Adhoc i Personal records",
+        "uk": "Отримати Adhoc та особисті записи",
+        "zh-cn": "获取Adhoc和个人记录"
       }
     }
   }

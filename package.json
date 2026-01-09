@@ -25,6 +25,7 @@
     "got": "^11.8.6",
     "http-cookie-agent": "^5.0.4",
     "json2iob": "^2.6.17",
+    "oauth-1.0a": "^2.2.6",
     "qs": "^6.14.0",
     "tough-cookie": "^4.1.4"
   },
