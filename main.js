@@ -93,10 +93,26 @@ class Garmin extends utils.Adapter {
       },
       native: {},
     });
+    await this.extendObject('auth.oauth1Token', {
+      type: 'state',
+      common: {
+        name: 'OAuth1 Token',
+        type: 'string',
+        role: 'value',
+        read: true,
+        write: false,
+      },
+      native: {},
+    });
     const tokenState = await this.getStateAsync('auth.token');
     if (tokenState && tokenState.val) {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
+    }
+    const oauth1State = await this.getStateAsync('auth.oauth1Token');
+    if (oauth1State && oauth1State.val && typeof oauth1State.val === 'string') {
+      this.oauth1Token = JSON.parse(oauth1State.val);
+      this.log.info('OAuth1 token loaded');
     }
 
     // If no session or no access token, perform full login
@@ -469,7 +485,10 @@ class Garmin extends utils.Adapter {
       return false;
     }
 
+    // Store both OAuth1 and OAuth2 tokens - OAuth1 is needed for refresh
+    this.oauth1Token = oauth1Token;
     this.session = oauth2Token;
+    await this.setState('auth.oauth1Token', JSON.stringify(oauth1Token), true);
     await this.setState('auth.token', JSON.stringify(this.session), true);
     this.setState('info.connection', true, true);
 
@@ -715,15 +734,9 @@ class Garmin extends utils.Adapter {
   async refreshToken() {
     this.log.debug('Refreshing OAuth2 token...');
 
-    if (!this.session || !this.session.refresh_token) {
-      this.log.warn('No refresh token available, performing full login');
-      await this.performFullLogin();
-      return;
-    }
-
-    // Check if refresh token is expired
-    if (this.session.refresh_token_expires_at && Date.now() / 1000 > this.session.refresh_token_expires_at) {
-      this.log.info('Refresh token expired, performing full login');
+    // OAuth1 token is required for refresh (re-exchange approach like garth)
+    if (!this.oauth1Token || !this.oauth1Token.oauth_token) {
+      this.log.warn('No OAuth1 token available, performing full login');
       await this.performFullLogin();
       return;
     }
@@ -734,37 +747,18 @@ class Garmin extends utils.Adapter {
         this.oauth = this.createOAuthClient(consumer.consumer_key, consumer.consumer_secret);
       }
 
-      const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/exchange/user/2.0`;
-      const request_data = { url, method: 'POST' };
-      const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data));
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'User-Agent': UA_IOS,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          ...authHeader,
-        },
-        body: `refresh_token=${this.session.refresh_token}`,
-      });
-
-      this.log.debug('Refresh Status: ' + res.status);
-
-      if (res.ok) {
-        const oauth2Token = await res.json();
-        oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
-        oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
-
-        this.session = oauth2Token;
-        await this.setState('auth.token', JSON.stringify(this.session), true);
-        this.setState('info.connection', true, true);
-        this.log.debug('Token refreshed successfully');
-      } else {
-        const text = await res.text();
-        this.log.warn('Token refresh failed: ' + text);
-        this.log.info('Performing full login...');
+      // Re-exchange OAuth1 token for new OAuth2 token (like garth does)
+      const oauth2Token = await this.exchangeOAuth2Token(this.oauth1Token);
+      if (!oauth2Token) {
+        this.log.warn('Token refresh via exchange failed, performing full login');
         await this.performFullLogin();
+        return;
       }
+
+      this.session = oauth2Token;
+      await this.setState('auth.token', JSON.stringify(this.session), true);
+      this.setState('info.connection', true, true);
+      this.log.debug('Token refreshed successfully via OAuth1 exchange');
     } catch (error) {
       this.log.error('Refresh token error: ' + error);
       this.log.info('Performing full login...');
