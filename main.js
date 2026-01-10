@@ -218,23 +218,22 @@ class Garmin extends utils.Adapter {
         const client = this.createClient(cookieJar);
 
         // Submit MFA code with saved session
-        const mfaRes = await client.post(
-          `${SSO}/verifyMFA/loginEnterMfaCode`,
-          new URLSearchParams({
+        const mfaRes = await client({
+          method: 'POST',
+          url: `${SSO}/verifyMFA/loginEnterMfaCode`,
+          params: SIGNIN_PARAMS,
+          headers: {
+            'User-Agent': UA_IOS,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+          },
+          data: new URLSearchParams({
             'mfa-code': this.config.mfa,
             embed: 'true',
             _csrf: mfaSession.csrf,
             fromPage: 'setupEnterMfaCode',
           }).toString(),
-          {
-            params: SIGNIN_PARAMS,
-            headers: {
-              'User-Agent': UA_IOS,
-              'Content-Type': 'application/x-www-form-urlencoded',
-              Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
-            },
-          },
-        );
+        });
 
         const mfaHtml = mfaRes.data;
         const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
@@ -264,14 +263,18 @@ class Garmin extends utils.Adapter {
 
     // Step 1: Set cookies
     this.log.debug('Setting SSO cookies...');
-    await client.get(`${SSO}/embed`, {
+    await client({
+      method: 'GET',
+      url: `${SSO}/embed`,
       params: SSO_EMBED_PARAMS,
       headers: { 'User-Agent': UA_IOS },
     });
 
     // Step 2: Get CSRF token
     this.log.debug('Getting CSRF token...');
-    const signinPageRes = await client.get(`${SSO}/signin`, {
+    const signinPageRes = await client({
+      method: 'GET',
+      url: `${SSO}/signin`,
       params: SIGNIN_PARAMS,
       headers: {
         'User-Agent': UA_IOS,
@@ -290,23 +293,22 @@ class Garmin extends utils.Adapter {
 
     // Step 3: Submit login
     this.log.debug('Submitting login...');
-    const loginRes = await client.post(
-      `${SSO}/signin`,
-      new URLSearchParams({
+    const loginRes = await client({
+      method: 'POST',
+      url: `${SSO}/signin`,
+      params: SIGNIN_PARAMS,
+      headers: {
+        'User-Agent': UA_IOS,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+      },
+      data: new URLSearchParams({
         username: this.config.username,
         password: this.config.password,
         embed: 'true',
         _csrf: csrfToken,
       }).toString(),
-      {
-        params: SIGNIN_PARAMS,
-        headers: {
-          'User-Agent': UA_IOS,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
-        },
-      },
-    );
+    });
 
     this.log.debug('Login response status: ' + loginRes.status);
     const loginHtml = loginRes.data;
@@ -334,23 +336,22 @@ class Garmin extends utils.Adapter {
 
       // MFA code is available, submit it
       this.log.info('MFA code found, submitting...');
-      const mfaRes = await client.post(
-        `${SSO}/verifyMFA/loginEnterMfaCode`,
-        new URLSearchParams({
+      const mfaRes = await client({
+        method: 'POST',
+        url: `${SSO}/verifyMFA/loginEnterMfaCode`,
+        params: SIGNIN_PARAMS,
+        headers: {
+          'User-Agent': UA_IOS,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+        },
+        data: new URLSearchParams({
           'mfa-code': this.config.mfa,
           embed: 'true',
           _csrf: mfaCsrf,
           fromPage: 'setupEnterMfaCode',
         }).toString(),
-        {
-          params: SIGNIN_PARAMS,
-          headers: {
-            'User-Agent': UA_IOS,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
-          },
-        },
-      );
+      });
 
       const mfaHtml = mfaRes.data;
       const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
