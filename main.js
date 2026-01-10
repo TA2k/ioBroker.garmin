@@ -93,26 +93,10 @@ class Garmin extends utils.Adapter {
       },
       native: {},
     });
-    await this.extendObject('auth.oauth1Token', {
-      type: 'state',
-      common: {
-        name: 'OAuth1 Token',
-        type: 'string',
-        role: 'value',
-        read: true,
-        write: false,
-      },
-      native: {},
-    });
     const tokenState = await this.getStateAsync('auth.token');
     if (tokenState && tokenState.val) {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
-    }
-    const oauth1State = await this.getStateAsync('auth.oauth1Token');
-    if (oauth1State && oauth1State.val && typeof oauth1State.val === 'string') {
-      this.oauth1Token = JSON.parse(oauth1State.val);
-      this.log.info('OAuth1 token loaded');
     }
 
     // If no session or no access token, perform full login
@@ -355,14 +339,6 @@ class Garmin extends utils.Adapter {
 
       if (mfaTitle !== 'Success') {
         this.log.error('MFA verification failed');
-        // Clear MFA code from settings
-        const adapterConfig = 'system.adapter.' + this.name + '.' + this.instance;
-        this.getForeignObject(adapterConfig, (error, obj) => {
-          if (obj && obj.native && obj.native.mfa) {
-            obj.native.mfa = '';
-            this.setForeignObject(adapterConfig, obj);
-          }
-        });
         return null;
       }
 
@@ -485,10 +461,8 @@ class Garmin extends utils.Adapter {
       return false;
     }
 
-    // Store both OAuth1 and OAuth2 tokens - OAuth1 is needed for refresh
-    this.oauth1Token = oauth1Token;
+    // Store OAuth2 token - refresh_token is used for token refresh
     this.session = oauth2Token;
-    await this.setState('auth.oauth1Token', JSON.stringify(oauth1Token), true);
     await this.setState('auth.token', JSON.stringify(this.session), true);
     this.setState('info.connection', true, true);
 
@@ -734,31 +708,49 @@ class Garmin extends utils.Adapter {
   async refreshToken() {
     this.log.debug('Refreshing OAuth2 token...');
 
-    // OAuth1 token is required for refresh (re-exchange approach like garth)
-    if (!this.oauth1Token || !this.oauth1Token.oauth_token) {
-      this.log.warn('No OAuth1 token available, performing full login');
+    // Check if we have a refresh token
+    if (!this.session || !this.session.refresh_token) {
+      this.log.warn('No refresh token available, performing full login');
       await this.performFullLogin();
       return;
     }
 
     try {
-      const consumer = await this.fetchOAuthConsumer();
-      if (!this.oauth) {
-        this.oauth = this.createOAuthClient(consumer.consumer_key, consumer.consumer_secret);
-      }
+      // Use DI OAuth2 token endpoint (like test-api.js does)
+      const url = `https://connectapi.${DOMAIN}/di-oauth2-service/oauth/token`;
 
-      // Re-exchange OAuth1 token for new OAuth2 token (like garth does)
-      const oauth2Token = await this.exchangeOAuth2Token(this.oauth1Token);
-      if (!oauth2Token) {
-        this.log.warn('Token refresh via exchange failed, performing full login');
+      const body = new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: 'GARMIN_CONNECT_MOBILE_ANDROID_DI',
+        refresh_token: this.session.refresh_token,
+      }).toString();
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'User-Agent': UA_IOS,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+      });
+
+      this.log.debug('Refresh Status: ' + res.status);
+
+      if (res.ok) {
+        const newToken = await res.json();
+        newToken.expires_at = Math.floor(Date.now() / 1000) + newToken.expires_in;
+        newToken.refresh_token_expires_at = Math.floor(Date.now() / 1000) + newToken.refresh_token_expires_in;
+
+        this.session = newToken;
+        await this.setState('auth.token', JSON.stringify(this.session), true);
+        this.setState('info.connection', true, true);
+        this.log.debug('Token refreshed successfully');
+      } else {
+        const text = await res.text();
+        this.log.warn('Token refresh failed: ' + text.substring(0, 300));
+        this.log.info('Performing full login...');
         await this.performFullLogin();
-        return;
       }
-
-      this.session = oauth2Token;
-      await this.setState('auth.token', JSON.stringify(this.session), true);
-      this.setState('info.connection', true, true);
-      this.log.debug('Token refreshed successfully via OAuth1 exchange');
     } catch (error) {
       this.log.error('Refresh token error: ' + error);
       this.log.info('Performing full login...');
@@ -778,11 +770,13 @@ class Garmin extends utils.Adapter {
       this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
       this.updateInterval && clearInterval(this.updateInterval);
       this.refreshTokenInterval && clearInterval(this.refreshTokenInterval);
-      if (this.config.token) {
+      // Clear MFA code from settings after successful login
+      if (this.config.mfa) {
         const adapterSettings = await this.getForeignObjectAsync('system.adapter.' + this.namespace);
-        adapterSettings.native.token = null;
-        adapterSettings.native.fgp = null;
-        await this.setForeignObjectAsync('system.adapter.' + this.namespace, adapterSettings);
+        if (adapterSettings && adapterSettings.native) {
+          adapterSettings.native.mfa = '';
+          await this.setForeignObjectAsync('system.adapter.' + this.namespace, adapterSettings);
+        }
       }
       callback();
     } catch (e) {
