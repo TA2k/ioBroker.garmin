@@ -93,8 +93,19 @@ class Garmin extends utils.Adapter {
       },
       native: {},
     });
+    await this.extendObject('auth.mfaSession', {
+      type: 'state',
+      common: {
+        name: 'MFA Session',
+        type: 'string',
+        role: 'value',
+        read: true,
+        write: false,
+      },
+      native: {},
+    });
     const tokenState = await this.getStateAsync('auth.token');
-    if (tokenState && tokenState.val) {
+    if (tokenState && tokenState.val && typeof tokenState.val === 'string') {
       this.session = JSON.parse(tokenState.val);
       this.log.info('Old Session found');
     }
@@ -191,18 +202,17 @@ class Garmin extends utils.Adapter {
   }
 
   async fetchWithCookies(url, options = {}) {
-    const cookieString = this.ssoCookieJar.getCookieString(url);
+    const cookieString = await this.ssoCookieJar.getCookieString(url);
     const headers = {
       ...options.headers,
       ...(cookieString ? { Cookie: cookieString } : {}),
     };
 
     const res = await fetch(url, { ...options, headers, redirect: 'manual' });
-    this.ssoCookieJar.setCookie(res.headers.get('set-cookie'), url);
 
     const setCookies = res.headers.getSetCookie?.() || [];
     for (const c of setCookies) {
-      this.ssoCookieJar.setCookie(c, url);
+      await this.ssoCookieJar.setCookie(c, url);
     }
 
     return res;
@@ -211,37 +221,8 @@ class Garmin extends utils.Adapter {
   async login() {
     this.log.info('Starting SSO login...');
 
-    // Simple cookie jar for SSO
-    this.ssoCookieJar = {
-      cookies: {},
-      setCookie(setCookieHeader, url) {
-        if (!setCookieHeader) return;
-        const headers = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-        const domain = new URL(url).hostname;
-        for (const header of headers) {
-          const [cookiePart] = header.split(';');
-          const [name, value] = cookiePart.split('=');
-          if (name && value) {
-            if (!this.cookies[domain]) this.cookies[domain] = {};
-            this.cookies[domain][name.trim()] = value.trim();
-          }
-        }
-      },
-      getCookieString(url) {
-        const domain = new URL(url).hostname;
-        const parts = domain.split('.');
-        const cookies = [];
-        for (let i = 0; i < parts.length - 1; i++) {
-          const d = parts.slice(i).join('.');
-          if (this.cookies[d]) {
-            for (const [name, value] of Object.entries(this.cookies[d])) {
-              cookies.push(`${name}=${value}`);
-            }
-          }
-        }
-        return cookies.join('; ');
-      },
-    };
+    // Use tough-cookie CookieJar for SSO (supports toJSON/deserializeSync)
+    this.ssoCookieJar = new CookieJar();
 
     const SSO = `https://sso.${DOMAIN}/sso`;
     const SSO_EMBED = `${SSO}/embed`;
@@ -259,6 +240,53 @@ class Garmin extends utils.Adapter {
       redirectAfterAccountLoginUrl: SSO_EMBED,
       redirectAfterAccountCreationUrl: SSO_EMBED,
     });
+
+    // Check if we have a saved MFA session to resume
+    const mfaSessionState = await this.getStateAsync('auth.mfaSession');
+    if (this.config.mfa && mfaSessionState && mfaSessionState.val && typeof mfaSessionState.val === 'string') {
+      this.log.info('Resuming MFA session...');
+      try {
+        const mfaSession = JSON.parse(mfaSessionState.val);
+        // Restore cookies from serialized CookieJar
+        this.ssoCookieJar = CookieJar.fromJSON(mfaSession.cookieJar);
+
+        // Submit MFA code with saved session
+        const mfaRes = await this.fetchWithCookies(`${SSO}/verifyMFA/loginEnterMfaCode?${SIGNIN_PARAMS}`, {
+          method: 'POST',
+          headers: {
+            'User-Agent': UA_IOS,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
+          },
+          body: new URLSearchParams({
+            'mfa-code': this.config.mfa,
+            embed: 'true',
+            _csrf: mfaSession.csrf,
+            fromPage: 'setupEnterMfaCode',
+          }),
+        });
+
+        const mfaHtml = await mfaRes.text();
+        const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
+        const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
+        this.log.debug('MFA Response title: ' + mfaTitle);
+
+        // Clear saved MFA session
+        await this.setState('auth.mfaSession', '', true);
+
+        if (mfaTitle === 'Success') {
+          const ticketMatch = mfaHtml.match(/embed\?ticket=([^"]+)"/);
+          if (ticketMatch) {
+            this.log.info('MFA verification successful');
+            return ticketMatch[1];
+          }
+        }
+        this.log.warn('Saved MFA session expired, starting fresh login...');
+      } catch (e) {
+        this.log.warn('Failed to resume MFA session: ' + e);
+        await this.setState('auth.mfaSession', '', true);
+      }
+    }
 
     // Step 1: Set cookies
     this.log.debug('Setting SSO cookies...');
@@ -308,15 +336,24 @@ class Garmin extends utils.Adapter {
 
     // Handle MFA
     if (title.includes('MFA')) {
-      this.log.info('MFA required. Please enter MFA code in the settings');
-      if (!this.config.mfa) {
-        return null;
-      }
-
       const mfaCsrfMatch = loginHtml.match(/name="_csrf"\s+value="(.+?)"/);
       const mfaCsrf = mfaCsrfMatch ? mfaCsrfMatch[1] : csrfToken;
 
-      this.log.debug('Submitting MFA code...');
+      if (!this.config.mfa) {
+        // Save session for resuming after MFA code is entered
+        this.log.info('MFA required. Saving session...');
+        const mfaSession = {
+          cookieJar: this.ssoCookieJar.toJSON(),
+          csrf: mfaCsrf,
+          timestamp: Date.now(),
+        };
+        await this.setState('auth.mfaSession', JSON.stringify(mfaSession), true);
+        this.log.info('Please enter MFA code in the settings. The session is saved for 5 minutes.');
+        return null;
+      }
+
+      // MFA code is available, submit it
+      this.log.info('MFA code found, submitting...');
       const mfaRes = await this.fetchWithCookies(`${SSO}/verifyMFA/loginEnterMfaCode?${SIGNIN_PARAMS}`, {
         method: 'POST',
         headers: {
@@ -338,12 +375,13 @@ class Garmin extends utils.Adapter {
       this.log.debug('MFA Response title: ' + mfaTitle);
 
       if (mfaTitle !== 'Success') {
-        this.log.error('MFA verification failed');
+        this.log.error('MFA verification failed. Code may be expired or invalid.');
         return null;
       }
 
       const ticketMatch = mfaHtml.match(/embed\?ticket=([^"]+)"/);
       if (ticketMatch) {
+        this.log.info('MFA verification successful');
         return ticketMatch[1];
       }
     }
