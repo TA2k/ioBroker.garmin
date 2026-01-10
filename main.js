@@ -218,7 +218,7 @@ class Garmin extends utils.Adapter {
         const client = this.createClient(cookieJar);
 
         // Submit MFA code with saved session
-        const mfaRes = await client({
+        const mfaHtml = await client({
           method: 'POST',
           url: `${SSO}/verifyMFA/loginEnterMfaCode`,
           params: SIGNIN_PARAMS,
@@ -233,9 +233,19 @@ class Garmin extends utils.Adapter {
             _csrf: mfaSession.csrf,
             fromPage: 'setupEnterMfaCode',
           }).toString(),
-        });
+        })
+          .then((res) => {
+            this.log.debug('MFA resume response: ' + res.status);
+            return res.data;
+          })
+          .catch((error) => {
+            this.log.error('MFA resume failed: ' + error.message);
+            return null;
+          });
 
-        const mfaHtml = mfaRes.data;
+        if (!mfaHtml) {
+          throw new Error('MFA resume request failed');
+        }
         const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
         const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
         this.log.debug('MFA Response title: ' + mfaTitle);
@@ -268,11 +278,17 @@ class Garmin extends utils.Adapter {
       url: `${SSO}/embed`,
       params: SSO_EMBED_PARAMS,
       headers: { 'User-Agent': UA_IOS },
-    });
+    })
+      .then((res) => {
+        this.log.debug('SSO cookies response: ' + res.status);
+      })
+      .catch((error) => {
+        this.log.error('SSO cookies failed: ' + error.message);
+      });
 
     // Step 2: Get CSRF token
     this.log.debug('Getting CSRF token...');
-    const signinPageRes = await client({
+    const signinPageHtml = await client({
       method: 'GET',
       url: `${SSO}/signin`,
       params: SIGNIN_PARAMS,
@@ -280,8 +296,19 @@ class Garmin extends utils.Adapter {
         'User-Agent': UA_IOS,
         Referer: `${SSO}/embed?${new URLSearchParams(SSO_EMBED_PARAMS)}`,
       },
-    });
-    const signinPageHtml = signinPageRes.data;
+    })
+      .then((res) => {
+        this.log.debug('CSRF response: ' + res.status);
+        return res.data;
+      })
+      .catch((error) => {
+        this.log.error('CSRF request failed: ' + error.message);
+        return null;
+      });
+
+    if (!signinPageHtml) {
+      return null;
+    }
 
     const csrfMatch = signinPageHtml.match(/name="_csrf"\s+value="(.+?)"/);
     if (!csrfMatch) {
@@ -293,7 +320,7 @@ class Garmin extends utils.Adapter {
 
     // Step 3: Submit login
     this.log.debug('Submitting login...');
-    const loginRes = await client({
+    const loginHtml = await client({
       method: 'POST',
       url: `${SSO}/signin`,
       params: SIGNIN_PARAMS,
@@ -308,10 +335,19 @@ class Garmin extends utils.Adapter {
         embed: 'true',
         _csrf: csrfToken,
       }).toString(),
-    });
+    })
+      .then((res) => {
+        this.log.debug('Login response: ' + res.status);
+        return res.data;
+      })
+      .catch((error) => {
+        this.log.error('Login request failed: ' + error.message);
+        return null;
+      });
 
-    this.log.debug('Login response status: ' + loginRes.status);
-    const loginHtml = loginRes.data;
+    if (!loginHtml) {
+      return null;
+    }
     const titleMatch = loginHtml.match(/<title>(.+?)<\/title>/);
     const title = titleMatch ? titleMatch[1] : '';
     this.log.debug('Response title: ' + title);
@@ -336,7 +372,7 @@ class Garmin extends utils.Adapter {
 
       // MFA code is available, submit it
       this.log.info('MFA code found, submitting...');
-      const mfaRes = await client({
+      const mfaHtml = await client({
         method: 'POST',
         url: `${SSO}/verifyMFA/loginEnterMfaCode`,
         params: SIGNIN_PARAMS,
@@ -351,9 +387,19 @@ class Garmin extends utils.Adapter {
           _csrf: mfaCsrf,
           fromPage: 'setupEnterMfaCode',
         }).toString(),
-      });
+      })
+        .then((res) => {
+          this.log.debug('MFA response: ' + res.status);
+          return res.data;
+        })
+        .catch((error) => {
+          this.log.error('MFA request failed: ' + error.message);
+          return null;
+        });
 
-      const mfaHtml = mfaRes.data;
+      if (!mfaHtml) {
+        return null;
+      }
       const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
       const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
       this.log.debug('MFA Response title: ' + mfaTitle);
