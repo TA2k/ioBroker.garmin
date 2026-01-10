@@ -10,9 +10,8 @@ const utils = require('@iobroker/adapter-core');
 const crypto = require('crypto');
 const OAuth = require('oauth-1.0a');
 const axios = require('axios').default;
-const got = require('got').default;
 const Json2iob = require('json2iob');
-const { CookieJar, MemoryCookieStore } = require('tough-cookie');
+const { CookieJar } = require('tough-cookie');
 
 const { HttpsCookieAgent } = require('http-cookie-agent/http');
 
@@ -35,27 +34,7 @@ class Garmin extends utils.Adapter {
     this.on('stateChange', this.onStateChange.bind(this));
     this.on('unload', this.onUnload.bind(this));
     this.deviceArray = [];
-
     this.json2iob = new Json2iob(this);
-    class CustomStore extends MemoryCookieStore {
-      putCookie(cookie, cb) {
-        // Remove expiration before saving
-        cookie.expires = 'Infinity';
-        cookie.maxAge = Infinity;
-        super.putCookie(cookie, cb);
-      }
-    }
-
-    this.cookieJar = new CookieJar(new CustomStore());
-
-    this.requestClient = axios.create({
-      withCredentials: true,
-      httpsAgent: new HttpsCookieAgent({
-        cookies: {
-          jar: this.cookieJar,
-        },
-      }),
-    });
   }
 
   /**
@@ -124,31 +103,22 @@ class Garmin extends utils.Adapter {
       this.log.error('Failed to login');
       return;
     }
-    await got
-      .get('https://connect.garmin.com/userprofile-service/userprofile/userProfileBase', {
-        cookieJar: this.cookieJar,
-        http2: true,
-        headers: {
-          Authorization: 'Bearer ' + this.session.access_token,
-          Accept: 'application/json, text/plain, */*',
-          'cache-control': 'no-cache',
-          'di-backend': 'connectapi.garmin.com',
-          nk: 'NT',
-          pragma: 'no-cache',
-          priority: 'u=1, i',
-          referer: 'https://connect.garmin.com/modern/home',
-          'user-agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-          'x-app-ver': '5.9.0.31a',
-          'x-lang': 'de-DE',
-        },
-      })
+    await axios({
+      method: 'GET',
+      url: 'https://connect.garmin.com/userprofile-service/userprofile/userProfileBase',
+      headers: {
+        Authorization: 'Bearer ' + this.session.access_token,
+        Accept: 'application/json, text/plain, */*',
+        'DI-Backend': 'connectapi.garmin.com',
+        'User-Agent': UA_IOS,
+      },
+    })
       .then((res) => {
-        this.log.debug(res.body);
-        this.userpreferences = JSON.parse(res.body);
+        this.log.debug(JSON.stringify(res.data));
+        this.userpreferences = res.data;
       })
       .catch((error) => {
-        this.log.error(error);
+        this.log.error(error.message);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
     this.updateInterval = null;
@@ -176,19 +146,23 @@ class Garmin extends utils.Adapter {
     );
   }
   async fetchOAuthConsumer() {
-    try {
-      const res = await fetch('https://thegarth.s3.amazonaws.com/oauth_consumer.json');
-      const data = await res.json();
-      this.log.debug('Fetched OAuth consumer from S3');
-      return data;
-    } catch (error) {
-      this.log.debug(error);
-      this.log.warn('Failed to fetch OAuth consumer, using fallback');
-      return {
-        consumer_key: 'fc3e99d2-118c-44b8-8ae3-03370dde24c0',
-        consumer_secret: 'E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF',
-      };
-    }
+    return axios({
+      method: 'GET',
+      url: 'https://thegarth.s3.amazonaws.com/oauth_consumer.json',
+      timeout: 10000,
+    })
+      .then((res) => {
+        this.log.debug('Fetched OAuth consumer from S3');
+        return res.data;
+      })
+      .catch((error) => {
+        this.log.debug('Failed to fetch OAuth consumer: ' + error.message);
+        this.log.warn('Using fallback OAuth consumer credentials');
+        return {
+          consumer_key: 'fc3e99d2-118c-44b8-8ae3-03370dde24c0',
+          consumer_secret: 'E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF',
+        };
+      });
   }
 
   createOAuthClient(consumerKey, consumerSecret) {
@@ -201,37 +175,29 @@ class Garmin extends utils.Adapter {
     });
   }
 
-  async fetchWithCookies(url, options = {}) {
-    const cookieString = await this.ssoCookieJar.getCookieString(url);
-    const headers = {
-      ...options.headers,
-      ...(cookieString ? { Cookie: cookieString } : {}),
-    };
-
-    const res = await fetch(url, { ...options, headers, redirect: 'manual' });
-
-    const setCookies = res.headers.getSetCookie?.() || [];
-    for (const c of setCookies) {
-      await this.ssoCookieJar.setCookie(c, url);
-    }
-
-    return res;
+  createClient(cookieJar) {
+    return axios.create({
+      withCredentials: true,
+      httpsAgent: new HttpsCookieAgent({
+        cookies: {
+          jar: cookieJar,
+        },
+      }),
+      maxRedirects: 5,
+    });
   }
 
   async login() {
     this.log.info('Starting SSO login...');
 
-    // Use tough-cookie CookieJar for SSO (supports toJSON/deserializeSync)
-    this.ssoCookieJar = new CookieJar();
-
     const SSO = `https://sso.${DOMAIN}/sso`;
     const SSO_EMBED = `${SSO}/embed`;
-    const SSO_EMBED_PARAMS = new URLSearchParams({
+    const SSO_EMBED_PARAMS = {
       id: 'gauth-widget',
       embedWidget: 'true',
       gauthHost: SSO,
-    });
-    const SIGNIN_PARAMS = new URLSearchParams({
+    };
+    const SIGNIN_PARAMS = {
       id: 'gauth-widget',
       embedWidget: 'true',
       gauthHost: SSO_EMBED,
@@ -239,7 +205,7 @@ class Garmin extends utils.Adapter {
       source: SSO_EMBED,
       redirectAfterAccountLoginUrl: SSO_EMBED,
       redirectAfterAccountCreationUrl: SSO_EMBED,
-    });
+    };
 
     // Check if we have a saved MFA session to resume
     const mfaSessionState = await this.getStateAsync('auth.mfaSession');
@@ -248,25 +214,29 @@ class Garmin extends utils.Adapter {
       try {
         const mfaSession = JSON.parse(mfaSessionState.val);
         // Restore cookies from serialized CookieJar
-        this.ssoCookieJar = CookieJar.fromJSON(mfaSession.cookieJar);
+        const cookieJar = CookieJar.fromJSON(mfaSession.cookieJar);
+        const client = this.createClient(cookieJar);
 
         // Submit MFA code with saved session
-        const mfaRes = await this.fetchWithCookies(`${SSO}/verifyMFA/loginEnterMfaCode?${SIGNIN_PARAMS}`, {
-          method: 'POST',
-          headers: {
-            'User-Agent': UA_IOS,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
-          },
-          body: new URLSearchParams({
+        const mfaRes = await client.post(
+          `${SSO}/verifyMFA/loginEnterMfaCode`,
+          new URLSearchParams({
             'mfa-code': this.config.mfa,
             embed: 'true',
             _csrf: mfaSession.csrf,
             fromPage: 'setupEnterMfaCode',
-          }),
-        });
+          }).toString(),
+          {
+            params: SIGNIN_PARAMS,
+            headers: {
+              'User-Agent': UA_IOS,
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+            },
+          },
+        );
 
-        const mfaHtml = await mfaRes.text();
+        const mfaHtml = mfaRes.data;
         const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
         const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
         this.log.debug('MFA Response title: ' + mfaTitle);
@@ -288,21 +258,27 @@ class Garmin extends utils.Adapter {
       }
     }
 
+    // Create client for fresh login
+    const cookieJar = new CookieJar();
+    const client = this.createClient(cookieJar);
+
     // Step 1: Set cookies
     this.log.debug('Setting SSO cookies...');
-    await this.fetchWithCookies(`${SSO}/embed?${SSO_EMBED_PARAMS}`, {
+    await client.get(`${SSO}/embed`, {
+      params: SSO_EMBED_PARAMS,
       headers: { 'User-Agent': UA_IOS },
     });
 
     // Step 2: Get CSRF token
     this.log.debug('Getting CSRF token...');
-    const signinPageRes = await this.fetchWithCookies(`${SSO}/signin?${SIGNIN_PARAMS}`, {
+    const signinPageRes = await client.get(`${SSO}/signin`, {
+      params: SIGNIN_PARAMS,
       headers: {
         'User-Agent': UA_IOS,
-        Referer: `${SSO}/embed?${SSO_EMBED_PARAMS}`,
+        Referer: `${SSO}/embed?${new URLSearchParams(SSO_EMBED_PARAMS)}`,
       },
     });
-    const signinPageHtml = await signinPageRes.text();
+    const signinPageHtml = signinPageRes.data;
 
     const csrfMatch = signinPageHtml.match(/name="_csrf"\s+value="(.+?)"/);
     if (!csrfMatch) {
@@ -314,22 +290,26 @@ class Garmin extends utils.Adapter {
 
     // Step 3: Submit login
     this.log.debug('Submitting login...');
-    const loginRes = await this.fetchWithCookies(`${SSO}/signin?${SIGNIN_PARAMS}`, {
-      method: 'POST',
-      headers: {
-        'User-Agent': UA_IOS,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
-      },
-      body: new URLSearchParams({
+    const loginRes = await client.post(
+      `${SSO}/signin`,
+      new URLSearchParams({
         username: this.config.username,
         password: this.config.password,
         embed: 'true',
         _csrf: csrfToken,
-      }),
-    });
+      }).toString(),
+      {
+        params: SIGNIN_PARAMS,
+        headers: {
+          'User-Agent': UA_IOS,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+        },
+      },
+    );
 
-    const loginHtml = await loginRes.text();
+    this.log.debug('Login response status: ' + loginRes.status);
+    const loginHtml = loginRes.data;
     const titleMatch = loginHtml.match(/<title>(.+?)<\/title>/);
     const title = titleMatch ? titleMatch[1] : '';
     this.log.debug('Response title: ' + title);
@@ -343,7 +323,7 @@ class Garmin extends utils.Adapter {
         // Save session for resuming after MFA code is entered
         this.log.info('MFA required. Saving session...');
         const mfaSession = {
-          cookieJar: this.ssoCookieJar.toJSON(),
+          cookieJar: cookieJar.toJSON(),
           csrf: mfaCsrf,
           timestamp: Date.now(),
         };
@@ -354,22 +334,25 @@ class Garmin extends utils.Adapter {
 
       // MFA code is available, submit it
       this.log.info('MFA code found, submitting...');
-      const mfaRes = await this.fetchWithCookies(`${SSO}/verifyMFA/loginEnterMfaCode?${SIGNIN_PARAMS}`, {
-        method: 'POST',
-        headers: {
-          'User-Agent': UA_IOS,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Referer: `${SSO}/signin?${SIGNIN_PARAMS}`,
-        },
-        body: new URLSearchParams({
+      const mfaRes = await client.post(
+        `${SSO}/verifyMFA/loginEnterMfaCode`,
+        new URLSearchParams({
           'mfa-code': this.config.mfa,
           embed: 'true',
           _csrf: mfaCsrf,
           fromPage: 'setupEnterMfaCode',
-        }),
-      });
+        }).toString(),
+        {
+          params: SIGNIN_PARAMS,
+          headers: {
+            'User-Agent': UA_IOS,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
+          },
+        },
+      );
 
-      const mfaHtml = await mfaRes.text();
+      const mfaHtml = mfaRes.data;
       const mfaTitleMatch = mfaHtml.match(/<title>(.+?)<\/title>/);
       const mfaTitle = mfaTitleMatch ? mfaTitleMatch[1] : '';
       this.log.debug('MFA Response title: ' + mfaTitle);
@@ -415,30 +398,29 @@ class Garmin extends utils.Adapter {
     const request_data = { url, method: 'GET' };
     const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data));
 
-    const res = await fetch(url, {
+    return axios({
+      method: 'GET',
+      url: url,
       headers: {
         'User-Agent': UA_IOS,
         ...authHeader,
       },
-    });
-
-    this.log.debug('OAuth1 Status: ' + res.status);
-
-    if (res.ok) {
-      const text = await res.text();
-      const params = new URLSearchParams(text);
-      const oauth1Token = {
-        oauth_token: params.get('oauth_token'),
-        oauth_token_secret: params.get('oauth_token_secret'),
-        mfa_token: params.get('mfa_token'),
-      };
-      this.log.debug('OAuth1 Token: ' + (oauth1Token.oauth_token ? 'OK' : 'MISSING'));
-      return oauth1Token;
-    } else {
-      const text = await res.text();
-      this.log.error('OAuth1 Error: ' + text.substring(0, 300));
-    }
-    return null;
+    })
+      .then((res) => {
+        this.log.debug('OAuth1 Status: ' + res.status);
+        const params = new URLSearchParams(res.data);
+        const oauth1Token = {
+          oauth_token: params.get('oauth_token'),
+          oauth_token_secret: params.get('oauth_token_secret'),
+          mfa_token: params.get('mfa_token'),
+        };
+        this.log.debug('OAuth1 Token: ' + (oauth1Token.oauth_token ? 'OK' : 'MISSING'));
+        return oauth1Token;
+      })
+      .catch((error) => {
+        this.log.error('OAuth1 request failed: ' + (error.response?.status || '') + ' ' + error.message);
+        return null;
+      });
   }
 
   async exchangeOAuth2Token(oauth1Token) {
@@ -455,29 +437,28 @@ class Garmin extends utils.Adapter {
 
     const body = oauth1Token.mfa_token ? `mfa_token=${oauth1Token.mfa_token}` : '';
 
-    const res = await fetch(url, {
+    return axios({
       method: 'POST',
+      url: url,
       headers: {
         'User-Agent': UA_IOS,
         'Content-Type': 'application/x-www-form-urlencoded',
         ...authHeader,
       },
-      body: body,
-    });
-
-    this.log.debug('OAuth2 Status: ' + res.status);
-
-    if (res.ok) {
-      const oauth2Token = await res.json();
-      oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
-      oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
-      this.log.debug('OAuth2 Token: OK');
-      return oauth2Token;
-    } else {
-      const text = await res.text();
-      this.log.error('OAuth2 Error: ' + text.substring(0, 500));
-    }
-    return null;
+      data: body,
+    })
+      .then((res) => {
+        this.log.debug('OAuth2 Status: ' + res.status);
+        const oauth2Token = res.data;
+        oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
+        oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
+        this.log.debug('OAuth2 Token: OK');
+        return oauth2Token;
+      })
+      .catch((error) => {
+        this.log.error('OAuth2 request failed: ' + (error.response?.status || '') + ' ' + error.message);
+        return null;
+      });
   }
 
   async performFullLogin() {
@@ -509,25 +490,17 @@ class Garmin extends utils.Adapter {
   }
 
   async getDeviceList() {
-    await got('https://connect.garmin.com/device-service/deviceregistration/devices', {
-      method: 'get',
-
+    await axios({
+      method: 'GET',
+      url: 'https://connect.garmin.com/device-service/deviceregistration/devices',
       headers: {
         Authorization: 'Bearer ' + this.session.access_token,
         'DI-Backend': 'connectapi.garmin.com',
         Accept: 'application/json, text/plain, */*',
-        'X-app-ver': '5.9.0.31a',
-        'Accept-Language': 'en-GB,en;q=0.9',
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-
-        NK: 'NT',
+        'User-Agent': UA_IOS,
       },
-      cookieJar: this.cookieJar,
-      http2: true,
     })
       .then(async (res) => {
-        res.data = JSON.parse(res.body);
         this.log.debug(JSON.stringify(res.data));
         if (res.data) {
           this.log.info(`Found ${res.data.length} devices`);
@@ -581,7 +554,7 @@ class Garmin extends utils.Adapter {
         }
       })
       .catch((error) => {
-        this.log.error(error);
+        this.log.error(error.message);
         error.response && this.log.error(JSON.stringify(error.response.data));
       });
   }
@@ -662,69 +635,41 @@ class Garmin extends utils.Adapter {
     ];
 
     for (const element of statusArray) {
-      // const url = element.url.replace("$id", id);
-
-      await got({
-        cookieJar: this.cookieJar,
-        method: element.method || 'get',
+      await axios({
+        method: element.method || 'GET',
         url: element.url,
         headers: {
           Accept: 'application/json, text/plain, */*',
-          'X-app-ver': '5.9.0.31a',
-          'Accept-Language': 'en-GB,en;q=0.9',
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-
           Authorization: 'Bearer ' + this.session.access_token,
           'DI-Backend': 'connectapi.garmin.com',
+          'User-Agent': UA_IOS,
         },
       })
-        .then(async (res) => {
-          res.data = JSON.parse(res.body);
+        .then((res) => {
           this.log.debug(JSON.stringify(res.data));
           if (!res.data) {
             return;
           }
-          const data = res.data;
-
-          const forceIndex = true;
-          const preferedArrayName = null;
-
-          this.json2iob.parse(element.path, data, {
-            forceIndex: forceIndex,
+          this.json2iob.parse(element.path, res.data, {
+            forceIndex: true,
             write: true,
-            preferedArrayName: preferedArrayName,
+            preferedArrayName: null,
             channelName: element.desc,
           });
-          // await this.setObjectNotExistsAsync(element.path + ".json", {
-          //   type: "state",
-          //   common: {
-          //     name: "Raw JSON",
-          //     write: false,
-          //     read: true,
-          //     type: "string",
-          //     role: "json",
-          //   },
-          //   native: {},
-          // });
-          // this.setState(element.path + ".json", JSON.stringify(data), true);
         })
         .catch((error) => {
-          if (error.response) {
-            if (error.response.statusCode === 401) {
-              error.response && this.log.debug(JSON.stringify(error.response.body));
-              this.log.info(element.path + ' received 401 error. Refreshing token in 60 seconds');
-              this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
-              this.refreshTokenTimeout = setTimeout(() => {
-                this.refreshToken();
-              }, 1000 * 60);
-
-              return;
-            }
+          if (error.response && error.response.status === 401) {
+            this.log.debug(JSON.stringify(error.response.data));
+            this.log.info(element.path + ' received 401 error. Refreshing token in 60 seconds');
+            this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
+            this.refreshTokenTimeout = setTimeout(() => {
+              this.refreshToken();
+            }, 1000 * 60);
+            return;
           }
           this.log.error(element.url);
-          this.log.error(error);
-          error.response && this.log.error(JSON.stringify(error.response.body));
+          this.log.error(error.message);
+          error.response && this.log.error(JSON.stringify(error.response.data));
         });
     }
   }
@@ -753,47 +698,45 @@ class Garmin extends utils.Adapter {
       return;
     }
 
-    try {
-      // Use DI OAuth2 token endpoint (like test-api.js does)
-      const url = `https://connectapi.${DOMAIN}/di-oauth2-service/oauth/token`;
+    const url = `https://connectapi.${DOMAIN}/di-oauth2-service/oauth/token`;
 
-      const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: 'GARMIN_CONNECT_MOBILE_ANDROID_DI',
-        refresh_token: this.session.refresh_token,
-      }).toString();
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: 'GARMIN_CONNECT_MOBILE_ANDROID_DI',
+      refresh_token: this.session.refresh_token,
+    }).toString();
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'User-Agent': UA_IOS,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: body,
+    const newToken = await axios({
+      method: 'POST',
+      url: url,
+      headers: {
+        'User-Agent': UA_IOS,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      data: body,
+    })
+      .then((res) => {
+        this.log.debug('Refresh Status: ' + res.status);
+        const token = res.data;
+        token.expires_at = Math.floor(Date.now() / 1000) + token.expires_in;
+        token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + token.refresh_token_expires_in;
+        this.log.debug('Token refreshed successfully');
+        return token;
+      })
+      .catch((error) => {
+        this.log.warn('Token refresh failed: ' + (error.response?.status || '') + ' ' + error.message);
+        return null;
       });
 
-      this.log.debug('Refresh Status: ' + res.status);
-
-      if (res.ok) {
-        const newToken = await res.json();
-        newToken.expires_at = Math.floor(Date.now() / 1000) + newToken.expires_in;
-        newToken.refresh_token_expires_at = Math.floor(Date.now() / 1000) + newToken.refresh_token_expires_in;
-
-        this.session = newToken;
-        await this.setState('auth.token', JSON.stringify(this.session), true);
-        this.setState('info.connection', true, true);
-        this.log.debug('Token refreshed successfully');
-      } else {
-        const text = await res.text();
-        this.log.warn('Token refresh failed: ' + text.substring(0, 300));
-        this.log.info('Performing full login...');
-        await this.performFullLogin();
-      }
-    } catch (error) {
-      this.log.error('Refresh token error: ' + error);
+    if (!newToken) {
       this.log.info('Performing full login...');
       await this.performFullLogin();
+      return;
     }
+
+    this.session = newToken;
+    await this.setState('auth.token', JSON.stringify(this.session), true);
+    this.setState('info.connection', true, true);
   }
 
   /**
@@ -803,7 +746,6 @@ class Garmin extends utils.Adapter {
   async onUnload(callback) {
     try {
       this.setState('info.connection', false, true);
-      this.refreshTimeout && clearTimeout(this.refreshTimeout);
       this.reLoginTimeout && clearTimeout(this.reLoginTimeout);
       this.refreshTokenTimeout && clearTimeout(this.refreshTokenTimeout);
       this.updateInterval && clearInterval(this.updateInterval);
@@ -838,29 +780,8 @@ class Garmin extends utils.Adapter {
           this.updateDevices();
           return;
         }
-        const data = {
-          body: {},
-          header: {
-            command: 'setAttributes',
-            said: deviceId,
-          },
-        };
-        data.body[command] = state.val;
-        await this.requestClient({
-          method: 'post',
-          url: '',
-        })
-          .then((res) => {
-            this.log.info(JSON.stringify(res.data));
-          })
-          .catch(async (error) => {
-            this.log.error(error);
-            error.response && this.log.error(JSON.stringify(error.response.data));
-          });
-        this.refreshTimeout = setTimeout(async () => {
-          this.log.info('Update devices');
-          await this.updateDevices();
-        }, 10 * 1000);
+        // TODO: Implement device command handling
+        this.log.debug(`Command ${command} for device ${deviceId}: ${state.val}`);
       }
     }
   }
