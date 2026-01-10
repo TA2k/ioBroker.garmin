@@ -153,6 +153,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug('Fetched OAuth consumer from S3');
+        this.log.debug(JSON.stringify(res.data));
         return res.data;
       })
       .catch((error) => {
@@ -227,15 +228,16 @@ class Garmin extends utils.Adapter {
             'Content-Type': 'application/x-www-form-urlencoded',
             Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
           },
-          data: new URLSearchParams({
+          data: {
             'mfa-code': this.config.mfa,
             embed: 'true',
             _csrf: mfaSession.csrf,
             fromPage: 'setupEnterMfaCode',
-          }).toString(),
+          },
         })
           .then((res) => {
             this.log.debug('MFA resume response: ' + res.status);
+            this.log.debug(JSON.stringify(res.data));
             return res.data;
           })
           .catch((error) => {
@@ -281,6 +283,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug('SSO cookies response: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
       })
       .catch((error) => {
         this.log.error('SSO cookies failed: ' + error.message);
@@ -299,6 +302,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug('CSRF response: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
         return res.data;
       })
       .catch((error) => {
@@ -329,15 +333,16 @@ class Garmin extends utils.Adapter {
         'Content-Type': 'application/x-www-form-urlencoded',
         Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
       },
-      data: new URLSearchParams({
+      data: {
         username: this.config.username,
         password: this.config.password,
         embed: 'true',
         _csrf: csrfToken,
-      }).toString(),
+      },
     })
       .then((res) => {
         this.log.debug('Login response: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
         return res.data;
       })
       .catch((error) => {
@@ -381,15 +386,16 @@ class Garmin extends utils.Adapter {
           'Content-Type': 'application/x-www-form-urlencoded',
           Referer: `${SSO}/signin?${new URLSearchParams(SIGNIN_PARAMS)}`,
         },
-        data: new URLSearchParams({
+        data: {
           'mfa-code': this.config.mfa,
           embed: 'true',
           _csrf: mfaCsrf,
           fromPage: 'setupEnterMfaCode',
-        }).toString(),
+        },
       })
         .then((res) => {
           this.log.debug('MFA response: ' + res.status);
+          this.log.debug(JSON.stringify(res.data));
           return res.data;
         })
         .catch((error) => {
@@ -455,6 +461,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug('OAuth1 Status: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
         const params = new URLSearchParams(res.data);
         const oauth1Token = {
           oauth_token: params.get('oauth_token'),
@@ -496,6 +503,7 @@ class Garmin extends utils.Adapter {
     })
       .then((res) => {
         this.log.debug('OAuth2 Status: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
         const oauth2Token = res.data;
         oauth2Token.expires_at = Math.floor(Date.now() / 1000) + oauth2Token.expires_in;
         oauth2Token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + oauth2Token.refresh_token_expires_in;
@@ -747,12 +755,6 @@ class Garmin extends utils.Adapter {
 
     const url = `https://connectapi.${DOMAIN}/di-oauth2-service/oauth/token`;
 
-    const body = new URLSearchParams({
-      grant_type: 'refresh_token',
-      client_id: 'GARMIN_CONNECT_MOBILE_ANDROID_DI',
-      refresh_token: this.session.refresh_token,
-    }).toString();
-
     const newToken = await axios({
       method: 'POST',
       url: url,
@@ -760,10 +762,15 @@ class Garmin extends utils.Adapter {
         'User-Agent': UA_IOS,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      data: body,
+      data: {
+        grant_type: 'refresh_token',
+        client_id: 'GARMIN_CONNECT_MOBILE_ANDROID_DI',
+        refresh_token: this.session.refresh_token,
+      },
     })
       .then((res) => {
         this.log.debug('Refresh Status: ' + res.status);
+        this.log.debug(JSON.stringify(res.data));
         const token = res.data;
         token.expires_at = Math.floor(Date.now() / 1000) + token.expires_in;
         token.refresh_token_expires_at = Math.floor(Date.now() / 1000) + token.refresh_token_expires_in;
