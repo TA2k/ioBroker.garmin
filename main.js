@@ -256,9 +256,10 @@ class Garmin extends utils.Adapter {
         await this.setState('auth.mfaSession', '', true);
 
         if (mfaTitle === 'Success') {
-          const ticketMatch = mfaHtml.match(/embed\?ticket=([^"]+)"/);
+          const ticketMatch = mfaHtml.match(/embed\?ticket=([A-Za-z0-9-]+)/);
           if (ticketMatch) {
             this.log.info('MFA verification successful');
+            this.log.debug('Ticket: ' + ticketMatch[1]);
             return ticketMatch[1];
           }
         }
@@ -415,9 +416,10 @@ class Garmin extends utils.Adapter {
         return null;
       }
 
-      const ticketMatch = mfaHtml.match(/embed\?ticket=([^"]+)"/);
+      const ticketMatch = mfaHtml.match(/embed\?ticket=([A-Za-z0-9-]+)/);
       if (ticketMatch) {
         this.log.info('MFA verification successful');
+        this.log.debug('Ticket: ' + ticketMatch[1]);
         return ticketMatch[1];
       }
     }
@@ -429,13 +431,14 @@ class Garmin extends utils.Adapter {
     }
 
     // Extract ticket
-    const ticketMatch = loginHtml.match(/embed\?ticket=([^"]+)"/);
+    const ticketMatch = loginHtml.match(/embed\?ticket=([A-Za-z0-9-]+)/);
     if (!ticketMatch) {
       this.log.error('Ticket not found in response');
       return null;
     }
 
     this.log.info('SSO Login successful');
+    this.log.debug('Ticket: ' + ticketMatch[1]);
     return ticketMatch[1];
   }
 
@@ -479,6 +482,12 @@ class Garmin extends utils.Adapter {
 
   async exchangeOAuth2Token(oauth1Token) {
     this.log.debug('Exchanging for OAuth2 token...');
+    this.log.debug('oauth1Token: ' + JSON.stringify(oauth1Token));
+
+    if (!this.oauth) {
+      this.log.error('OAuth client not initialized!');
+      return null;
+    }
 
     const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/exchange/user/2.0`;
 
@@ -488,8 +497,10 @@ class Garmin extends utils.Adapter {
       secret: oauth1Token.oauth_token_secret,
     };
     const authHeader = this.oauth.toHeader(this.oauth.authorize(request_data, token));
+    this.log.debug('authHeader: ' + JSON.stringify(authHeader));
 
     const body = oauth1Token.mfa_token ? `mfa_token=${oauth1Token.mfa_token}` : '';
+    this.log.debug('body: ' + body);
 
     return axios({
       method: 'POST',
@@ -532,6 +543,8 @@ class Garmin extends utils.Adapter {
     const oauth2Token = await this.exchangeOAuth2Token(oauth1Token);
     if (!oauth2Token) {
       this.log.error('OAuth2 token exchange failed');
+      // Clear MFA session to force fresh login next time
+      await this.setState('auth.mfaSession', '', true);
       return false;
     }
 
