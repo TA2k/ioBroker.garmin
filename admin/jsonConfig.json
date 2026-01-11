@@ -91,6 +91,37 @@
         "uk": "Отримати Adhoc та особисті записи",
         "zh-cn": "获取Adhoc和个人记录"
       }
+    },
+    "allowlist": {
+      "type": "text",
+      "newLine": true,
+      "sm": 12,
+      "label": {
+        "en": "Allowlist for datapoints (comma-separated)",
+        "de": "Allowlist für Datenpunkte (komma-separiert)",
+        "ru": "Белый список для точек данных (через запятую)",
+        "pt": "Lista de permissões para pontos de dados (separados por vírgula)",
+        "nl": "Allowlist voor datapunten (kommagescheiden)",
+        "fr": "Liste autorisée pour les points de données (séparés par des virgules)",
+        "it": "Lista consentita per i punti dati (separati da virgola)",
+        "es": "Lista permitida para puntos de datos (separados por comas)",
+        "pl": "Lista dozwolonych punktów danych (oddzielonych przecinkami)",
+        "uk": "Білий список для точок даних (через кому)",
+        "zh-cn": "数据点允许列表（逗号分隔）"
+      },
+      "help": {
+        "en": "Only datapoints containing these names will be saved. Leave empty to save all.",
+        "de": "Nur Datenpunkte, die diese Namen enthalten, werden gespeichert. Leer lassen, um alle zu speichern.",
+        "ru": "Будут сохранены только точки данных, содержащие эти имена. Оставьте пустым, чтобы сохранить все.",
+        "pt": "Apenas pontos de dados contendo esses nomes serão salvos. Deixe vazio para salvar todos.",
+        "nl": "Alleen datapunten met deze namen worden opgeslagen. Laat leeg om alles op te slaan.",
+        "fr": "Seuls les points de données contenant ces noms seront enregistrés. Laissez vide pour tout enregistrer.",
+        "it": "Solo i punti dati contenenti questi nomi verranno salvati. Lasciare vuoto per salvare tutto.",
+        "es": "Solo se guardarán los puntos de datos que contengan estos nombres. Dejar vacío para guardar todo.",
+        "pl": "Tylko punkty danych zawierające te nazwy zostaną zapisane. Pozostaw puste, aby zapisać wszystko.",
+        "uk": "Будуть збережені лише точки даних, що містять ці імена. Залиште порожнім, щоб зберегти все.",
+        "zh-cn": "只有包含这些名称的数据点才会被保存。留空以保存全部。"
+      }
     }
   }
 }

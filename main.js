@@ -35,6 +35,7 @@ class Garmin extends utils.Adapter {
     this.on('unload', this.onUnload.bind(this));
     this.deviceArray = [];
     this.json2iob = new Json2iob(this);
+    this.allowlist = [];
   }
 
   /**
@@ -52,6 +53,17 @@ class Garmin extends utils.Adapter {
     if (!this.config.username || !this.config.password) {
       this.log.error('Please set username and password in the instance settings');
       return;
+    }
+
+    // Parse allowlist from config
+    if (this.config.allowlist && typeof this.config.allowlist === 'string') {
+      this.allowlist = this.config.allowlist
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0);
+      if (this.allowlist.length > 0) {
+        this.log.info('Allowlist active with ' + this.allowlist.length + ' entries: ' + this.allowlist.join(', '));
+      }
     }
 
     await this.extendObject('auth', {
@@ -543,8 +555,10 @@ class Garmin extends utils.Adapter {
     const oauth2Token = await this.exchangeOAuth2Token(oauth1Token);
     if (!oauth2Token) {
       this.log.error('OAuth2 token exchange failed');
-      // Clear MFA session to force fresh login next time
+      // Clear MFA session and token to force fresh login next time
+      this.log.info('Clearing MFA session and token for fresh login...');
       await this.setState('auth.mfaSession', '', true);
+      await this.setState('auth.token', '', true);
       return false;
     }
 
@@ -718,7 +732,12 @@ class Garmin extends utils.Adapter {
           if (!res.data) {
             return;
           }
-          this.json2iob.parse(element.path, res.data, {
+          const filteredData = this.filterByAllowlist(res.data);
+          if (filteredData === null) {
+            this.log.debug('No data left after allowlist filter for ' + element.path);
+            return;
+          }
+          this.json2iob.parse(element.path, filteredData, {
             forceIndex: true,
             write: true,
             preferedArrayName: null,
@@ -755,6 +774,37 @@ class Garmin extends utils.Adapter {
     return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
+  }
+
+  filterByAllowlist(data, path = '') {
+    if (this.allowlist.length === 0) {
+      return data;
+    }
+
+    if (Array.isArray(data)) {
+      return data.map((item, index) => this.filterByAllowlist(item, `${path}[${index}]`)).filter((item) => item !== null);
+    }
+
+    if (data !== null && typeof data === 'object') {
+      const filtered = {};
+      for (const key of Object.keys(data)) {
+        const fullPath = path ? `${path}.${key}` : key;
+        const keyLower = key.toLowerCase();
+        const isAllowed = this.allowlist.some((allowed) => keyLower.includes(allowed) || allowed.includes(keyLower));
+
+        if (isAllowed) {
+          filtered[key] = data[key];
+        } else if (typeof data[key] === 'object' && data[key] !== null) {
+          const nestedFiltered = this.filterByAllowlist(data[key], fullPath);
+          if (nestedFiltered !== null && Object.keys(nestedFiltered).length > 0) {
+            filtered[key] = nestedFiltered;
+          }
+        }
+      }
+      return Object.keys(filtered).length > 0 ? filtered : null;
+    }
+
+    return data;
   }
   async refreshToken() {
     this.log.debug('Refreshing OAuth2 token...');
