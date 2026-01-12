@@ -96,26 +96,28 @@
       "type": "text",
       "newLine": true,
       "sm": 12,
+      "placeholder": "hydration.valueinml, totalsteps, dailysleep.dailysleepdto.sleepscores.overall.value",
       "label": {
-        "en": "Exact datapoint names (comma-separated)",
-        "de": "Exakte Datenpunkt-Namen (komma-separiert)"
+        "en": "Exact datapoint names or paths (comma-separated)",
+        "de": "Exakte Datenpunkt-Namen oder Pfade (komma-separiert)"
       },
       "help": {
-        "en": "Datapoints with exactly these names will be saved. Leave empty to disable.",
-        "de": "Datenpunkte mit genau diesen Namen werden gespeichert. Leer lassen zum Deaktivieren."
+        "en": "Datapoints with exactly these names or paths will be saved. Supports full paths like 'hydration.valueinml'. Leave empty to disable.",
+        "de": "Datenpunkte mit genau diesen Namen oder Pfaden werden gespeichert. Unterstuetzt volle Pfade wie 'hydration.valueinml'. Leer lassen zum Deaktivieren."
       }
     },
     "allowlistSearch": {
       "type": "text",
       "newLine": true,
       "sm": 12,
+      "placeholder": "hydration, sleep, steps",
       "label": {
         "en": "Search terms (comma-separated)",
         "de": "Suchbegriffe (komma-separiert)"
       },
       "help": {
-        "en": "Datapoints containing these terms will be saved. Leave empty to disable.",
-        "de": "Datenpunkte, die diese Begriffe enthalten, werden gespeichert. Leer lassen zum Deaktivieren."
+        "en": "Datapoints containing these terms in name or path will be saved. Example: 'hydration' matches all hydration datapoints. Leave empty to disable.",
+        "de": "Datenpunkte, die diese Begriffe im Namen oder Pfad enthalten, werden gespeichert. Beispiel: 'hydration' findet alle Hydration-Datenpunkte. Leer lassen zum Deaktivieren."
       }
     }
   }

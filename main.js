@@ -745,9 +745,27 @@ class Garmin extends utils.Adapter {
           if (!res.data) {
             return;
           }
+          // Check for empty arrays/objects before filtering
+          if (Array.isArray(res.data) && res.data.length === 0) {
+            this.log.debug('Empty array response for ' + element.path);
+            return;
+          }
+          if (typeof res.data === 'object' && !Array.isArray(res.data) && Object.keys(res.data).length === 0) {
+            this.log.debug('Empty object response for ' + element.path);
+            return;
+          }
           const filteredData = this.filterByAllowlist(res.data);
           if (filteredData === null) {
             this.log.debug('No data left after allowlist filter for ' + element.path);
+            return;
+          }
+          // Also check if filtered data is empty
+          if (Array.isArray(filteredData) && filteredData.length === 0) {
+            this.log.debug('Empty array after filter for ' + element.path);
+            return;
+          }
+          if (typeof filteredData === 'object' && !Array.isArray(filteredData) && Object.keys(filteredData).length === 0) {
+            this.log.debug('Empty object after filter for ' + element.path);
             return;
           }
           this.json2iob.parse(element.path, filteredData, {
@@ -804,11 +822,12 @@ class Garmin extends utils.Adapter {
       for (const key of Object.keys(data)) {
         const fullPath = path ? `${path}.${key}` : key;
         const keyLower = key.toLowerCase();
+        const fullPathLower = fullPath.toLowerCase();
 
-        // Check exact match
-        const isExactMatch = this.allowlistExact.includes(keyLower);
-        // Check search/partial match
-        const isSearchMatch = this.allowlistSearch.some((term) => keyLower.includes(term));
+        // Check exact match (by key or full path)
+        const isExactMatch = this.allowlistExact.includes(keyLower) || this.allowlistExact.includes(fullPathLower);
+        // Check search/partial match (by key or full path)
+        const isSearchMatch = this.allowlistSearch.some((term) => keyLower.includes(term) || fullPathLower.includes(term));
 
         if (isExactMatch || isSearchMatch) {
           filtered[key] = data[key];

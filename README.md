@@ -19,6 +19,45 @@ Adapter for Garmin Connect
 
 Die garmin connect Mail und Passwort eingeben.
 
+## Datenpunkt Filter (Allowlist)
+
+Der Adapter erzeugt standardmaessig viele Datenpunkte. Mit der Allowlist koennen gezielt nur bestimmte Datenpunkte angelegt werden.
+
+### Filter Typen
+
+| Typ | Beschreibung | Beispiel |
+| --- | ------------ | -------- |
+| **Exact** | Exakte Uebereinstimmung mit Key oder Pfad | `valueinml` oder `hydration.valueinml` |
+| **Search** | Teilstring-Suche in Key oder Pfad | `hydration` findet alles unter hydration |
+
+### Beispiele
+
+**Nur bestimmte Felder:**
+
+```text
+Exact: hydration.valueinml, hydration.sweatlossInML
+```
+
+**Alles aus einem Bereich:**
+
+```text
+Search: hydration
+```
+
+**Kombination:**
+
+```text
+Exact: totalsteps, totaldistancemeters
+Search: sleep
+```
+
+### Hinweise
+
+- Filter sind case-insensitive (Gross/Kleinschreibung egal)
+- Pfade werden mit Punkt getrennt: `dailysleep.dailysleepdto.sleepscores.overall.value`
+- Leere Allowlist = alle Datenpunkte werden angelegt
+- Leere API-Antworten erzeugen keine Ordner
+
 ## Diskussion und Fragen
 
 <https://forum.iobroker.net/topic/59413/test-adapter-garmin>
