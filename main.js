@@ -513,7 +513,14 @@ class Garmin extends utils.Adapter {
 
     const url = `https://connectapi.${DOMAIN}/oauth-service/oauth/exchange/user/2.0`;
 
-    const request_data = { url, method: 'POST' };
+    // Body data - must be included in OAuth signature
+    const bodyData = oauth1Token.mfa_token ? { mfa_token: oauth1Token.mfa_token } : {};
+
+    const request_data = {
+      url,
+      method: 'POST',
+      data: bodyData, // Include body in signature calculation
+    };
     const token = {
       key: oauth1Token.oauth_token,
       secret: oauth1Token.oauth_token_secret,
