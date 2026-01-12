@@ -35,7 +35,8 @@ class Garmin extends utils.Adapter {
     this.on('unload', this.onUnload.bind(this));
     this.deviceArray = [];
     this.json2iob = new Json2iob(this);
-    this.allowlist = [];
+    this.allowlistExact = [];
+    this.allowlistSearch = [];
   }
 
   /**
@@ -55,14 +56,23 @@ class Garmin extends utils.Adapter {
       return;
     }
 
-    // Parse allowlist from config
-    if (this.config.allowlist && typeof this.config.allowlist === 'string') {
-      this.allowlist = this.config.allowlist
+    // Parse allowlists from config
+    if (this.config.allowlistExact && typeof this.config.allowlistExact === 'string') {
+      this.allowlistExact = this.config.allowlistExact
         .split(',')
         .map((item) => item.trim().toLowerCase())
         .filter((item) => item.length > 0);
-      if (this.allowlist.length > 0) {
-        this.log.info('Allowlist active with ' + this.allowlist.length + ' entries: ' + this.allowlist.join(', '));
+      if (this.allowlistExact.length > 0) {
+        this.log.info('Exact allowlist active: ' + this.allowlistExact.join(', '));
+      }
+    }
+    if (this.config.allowlistSearch && typeof this.config.allowlistSearch === 'string') {
+      this.allowlistSearch = this.config.allowlistSearch
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0);
+      if (this.allowlistSearch.length > 0) {
+        this.log.info('Search allowlist active: ' + this.allowlistSearch.join(', '));
       }
     }
 
@@ -535,6 +545,9 @@ class Garmin extends utils.Adapter {
       })
       .catch((error) => {
         this.log.error('OAuth2 request failed: ' + (error.response?.status || '') + ' ' + error.message);
+        if (error.response?.data) {
+          this.log.error('OAuth2 error response: ' + JSON.stringify(error.response.data));
+        }
         return null;
       });
   }
@@ -777,7 +790,8 @@ class Garmin extends utils.Adapter {
   }
 
   filterByAllowlist(data, path = '') {
-    if (this.allowlist.length === 0) {
+    // If both lists are empty, return all data
+    if (this.allowlistExact.length === 0 && this.allowlistSearch.length === 0) {
       return data;
     }
 
@@ -790,9 +804,13 @@ class Garmin extends utils.Adapter {
       for (const key of Object.keys(data)) {
         const fullPath = path ? `${path}.${key}` : key;
         const keyLower = key.toLowerCase();
-        const isAllowed = this.allowlist.some((allowed) => keyLower.includes(allowed) || allowed.includes(keyLower));
 
-        if (isAllowed) {
+        // Check exact match
+        const isExactMatch = this.allowlistExact.includes(keyLower);
+        // Check search/partial match
+        const isSearchMatch = this.allowlistSearch.some((term) => keyLower.includes(term));
+
+        if (isExactMatch || isSearchMatch) {
           filtered[key] = data[key];
         } else if (typeof data[key] === 'object' && data[key] !== null) {
           const nestedFiltered = this.filterByAllowlist(data[key], fullPath);
