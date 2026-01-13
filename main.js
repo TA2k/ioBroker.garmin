@@ -35,7 +35,8 @@ class Garmin extends utils.Adapter {
     this.on('unload', this.onUnload.bind(this));
     this.deviceArray = [];
     this.json2iob = new Json2iob(this);
-    this.allowlistExact = [];
+    this.allowlistExactKeys = [];
+    this.allowlistExactPaths = [];
     this.allowlistSearch = [];
   }
 
@@ -57,13 +58,22 @@ class Garmin extends utils.Adapter {
     }
 
     // Parse allowlists from config
-    if (this.config.allowlistExact && typeof this.config.allowlistExact === 'string') {
-      this.allowlistExact = this.config.allowlistExact
+    if (this.config.allowlistExactKeys && typeof this.config.allowlistExactKeys === 'string') {
+      this.allowlistExactKeys = this.config.allowlistExactKeys
         .split(',')
         .map((item) => item.trim().toLowerCase())
         .filter((item) => item.length > 0);
-      if (this.allowlistExact.length > 0) {
-        this.log.info('Exact allowlist active: ' + this.allowlistExact.join(', '));
+      if (this.allowlistExactKeys.length > 0) {
+        this.log.info('Exact keys allowlist active: ' + this.allowlistExactKeys.join(', '));
+      }
+    }
+    if (this.config.allowlistExactPaths && typeof this.config.allowlistExactPaths === 'string') {
+      this.allowlistExactPaths = this.config.allowlistExactPaths
+        .split(',')
+        .map((item) => item.trim().toLowerCase())
+        .filter((item) => item.length > 0);
+      if (this.allowlistExactPaths.length > 0) {
+        this.log.info('Exact paths allowlist active: ' + this.allowlistExactPaths.join(', '));
       }
     }
     if (this.config.allowlistSearch && typeof this.config.allowlistSearch === 'string') {
@@ -816,14 +826,16 @@ class Garmin extends utils.Adapter {
   }
 
   filterByAllowlist(data, path = '') {
-    // If both lists are empty, return all data
-    if (this.allowlistExact.length === 0 && this.allowlistSearch.length === 0) {
+    // If all lists are empty, return all data
+    if (this.allowlistExactKeys.length === 0 && this.allowlistExactPaths.length === 0 && this.allowlistSearch.length === 0) {
       return data;
     }
 
     if (Array.isArray(data)) {
       // For arrays, keep the same path (no index) - filter each item
+      this.log.debug(`Filter: Processing array at path "${path}" with ${data.length} items`);
       const filtered = data.map((item) => this.filterByAllowlist(item, path)).filter((item) => item !== null);
+      this.log.debug(`Filter: Array at "${path}" filtered from ${data.length} to ${filtered.length} items`);
       return filtered.length > 0 ? filtered : null;
     }
 
@@ -834,12 +846,15 @@ class Garmin extends utils.Adapter {
         const keyLower = key.toLowerCase();
         const fullPathLower = fullPath.toLowerCase();
 
-        // Check exact match (by key name OR full path)
-        const isExactMatch = this.allowlistExact.includes(keyLower) || this.allowlistExact.includes(fullPathLower);
+        // Check exact key match (only field name)
+        const isExactKeyMatch = this.allowlistExactKeys.includes(keyLower);
+        // Check exact path match (full path)
+        const isExactPathMatch = this.allowlistExactPaths.includes(fullPathLower);
         // Check search/partial match (key or path contains search term)
         const isSearchMatch = this.allowlistSearch.some((term) => keyLower.includes(term) || fullPathLower.includes(term));
 
-        if (isExactMatch || isSearchMatch) {
+        if (isExactKeyMatch || isExactPathMatch || isSearchMatch) {
+          this.log.debug(`Filter: MATCH "${fullPath}" (key=${isExactKeyMatch}, path=${isExactPathMatch}, search=${isSearchMatch})`);
           filtered[key] = data[key];
         } else if (typeof data[key] === 'object' && data[key] !== null) {
           const nestedFiltered = this.filterByAllowlist(data[key], fullPath);

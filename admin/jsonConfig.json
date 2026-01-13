@@ -92,32 +92,46 @@
         "zh-cn": "获取Adhoc和个人记录"
       }
     },
-    "allowlistExact": {
+    "allowlistExactKeys": {
       "type": "text",
       "newLine": true,
       "sm": 12,
-      "placeholder": "hydration.valueinml, totalsteps, dailysleep.dailysleepdto.sleepscores.overall.value",
+      "placeholder": "bmi, weight, bodyfat, bonemass",
       "label": {
-        "en": "Exact datapoint names or paths (comma-separated)",
-        "de": "Exakte Datenpunkt-Namen oder Pfade (komma-separiert)"
+        "en": "Exact field names (comma-separated)",
+        "de": "Exakte Feldnamen (komma-separiert)"
       },
       "help": {
-        "en": "Datapoints with exactly these names or paths will be saved. Supports full paths like 'hydration.valueinml'. Leave empty to disable.",
-        "de": "Datenpunkte mit genau diesen Namen oder Pfaden werden gespeichert. Unterstuetzt volle Pfade wie 'hydration.valueinml'. Leer lassen zum Deaktivieren."
+        "en": "Only the field name must match exactly (e.g. 'bmi' matches any field named 'bmi').",
+        "de": "Nur der Feldname muss exakt passen (z.B. 'bmi' findet jedes Feld namens 'bmi')."
+      }
+    },
+    "allowlistExactPaths": {
+      "type": "text",
+      "newLine": true,
+      "sm": 12,
+      "placeholder": "dateWeightList.bmi, hydration.valueInML",
+      "label": {
+        "en": "Exact paths (comma-separated)",
+        "de": "Exakte Pfade (komma-separiert)"
+      },
+      "help": {
+        "en": "The full path must match exactly (e.g. 'dateWeightList.bmi').",
+        "de": "Der volle Pfad muss exakt passen (z.B. 'dateWeightList.bmi')."
       }
     },
     "allowlistSearch": {
       "type": "text",
       "newLine": true,
       "sm": 12,
-      "placeholder": "hydration, sleep, steps",
+      "placeholder": "heart, sleep, stress",
       "label": {
         "en": "Search terms (comma-separated)",
         "de": "Suchbegriffe (komma-separiert)"
       },
       "help": {
-        "en": "Datapoints containing these terms in name or path will be saved. Example: 'hydration' matches all hydration datapoints. Leave empty to disable.",
-        "de": "Datenpunkte, die diese Begriffe im Namen oder Pfad enthalten, werden gespeichert. Beispiel: 'hydration' findet alle Hydration-Datenpunkte. Leer lassen zum Deaktivieren."
+        "en": "Partial match - any field containing the term will be saved (e.g. 'heart' matches 'heartRate', 'restingHeart').",
+        "de": "Teilsuche - jedes Feld das den Begriff enthaelt wird gespeichert (z.B. 'heart' findet 'heartRate', 'restingHeart')."
       }
     }
   }
