@@ -775,6 +775,7 @@ class Garmin extends utils.Adapter {
             this.log.debug('Empty object after filter for ' + element.path);
             return;
           }
+          this.log.debug('Parsing ' + element.path + ' with filtered data: ' + JSON.stringify(filteredData).substring(0, 500));
           this.json2iob.parse(element.path, filteredData, {
             forceIndex: true,
             write: true,
@@ -821,7 +822,9 @@ class Garmin extends utils.Adapter {
     }
 
     if (Array.isArray(data)) {
-      return data.map((item, index) => this.filterByAllowlist(item, `${path}[${index}]`)).filter((item) => item !== null);
+      // For arrays, keep the same path (no index) - filter each item
+      const filtered = data.map((item) => this.filterByAllowlist(item, path)).filter((item) => item !== null);
+      return filtered.length > 0 ? filtered : null;
     }
 
     if (data !== null && typeof data === 'object') {
@@ -831,17 +834,21 @@ class Garmin extends utils.Adapter {
         const keyLower = key.toLowerCase();
         const fullPathLower = fullPath.toLowerCase();
 
-        // Check exact match (by key or full path)
+        // Check exact match (by key name OR full path)
         const isExactMatch = this.allowlistExact.includes(keyLower) || this.allowlistExact.includes(fullPathLower);
-        // Check search/partial match (by key or full path)
+        // Check search/partial match (key or path contains search term)
         const isSearchMatch = this.allowlistSearch.some((term) => keyLower.includes(term) || fullPathLower.includes(term));
 
         if (isExactMatch || isSearchMatch) {
           filtered[key] = data[key];
         } else if (typeof data[key] === 'object' && data[key] !== null) {
           const nestedFiltered = this.filterByAllowlist(data[key], fullPath);
-          if (nestedFiltered !== null && Object.keys(nestedFiltered).length > 0) {
-            filtered[key] = nestedFiltered;
+          if (nestedFiltered !== null) {
+            if (Array.isArray(nestedFiltered) && nestedFiltered.length > 0) {
+              filtered[key] = nestedFiltered;
+            } else if (!Array.isArray(nestedFiltered) && Object.keys(nestedFiltered).length > 0) {
+              filtered[key] = nestedFiltered;
+            }
           }
         }
       }
