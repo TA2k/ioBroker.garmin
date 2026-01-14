@@ -771,7 +771,7 @@ class Garmin extends utils.Adapter {
             this.log.debug('Empty object response for ' + element.path);
             return;
           }
-          const filteredData = this.filterByAllowlist(res.data);
+          const filteredData = this.filterByAllowlist(res.data, element.path);
           if (filteredData === null) {
             this.log.debug('No data left after allowlist filter for ' + element.path);
             return;
@@ -832,7 +832,12 @@ class Garmin extends utils.Adapter {
     }
 
     if (Array.isArray(data)) {
-      // For arrays, keep the same path (no index) - filter each item
+      // For arrays of primitives (numbers, strings), check if array key matches allowlist
+      if (data.length > 0 && typeof data[0] !== 'object') {
+        this.log.debug(`Filter: Skipping primitive array at path "${path}"`);
+        return null; // Primitive arrays can't be filtered by key, skip them unless parent key matched
+      }
+      // For arrays of objects, filter each item
       this.log.debug(`Filter: Processing array at path "${path}" with ${data.length} items`);
       const filtered = data.map((item) => this.filterByAllowlist(item, path)).filter((item) => item !== null);
       this.log.debug(`Filter: Array at "${path}" filtered from ${data.length} to ${filtered.length} items`);
