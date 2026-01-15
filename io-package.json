@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "garmin",
-    "version": "0.2.1",
+    "version": "1.0.0",
     "news": {
+      "1.0.0": {
+        "en": "fix login and add datapoint filter",
+        "de": "fix login und datenpunktfilter hinzugefügt",
+        "ru": "исправить логин и добавить фильтр точки данных",
+        "pt": "corrigir login e adicionar filtro de datapoint",
+        "nl": "fix login en voeg datapoint filter",
+        "fr": "correction du login et ajout du filtre datapoint",
+        "it": "fissare il login e aggiungere il filtro datapoint",
+        "es": "fijar inicio de sesión y añadir filtro datapoint",
+        "pl": "naprawić logowanie i dodać filtr datapoint",
+        "uk": "виправити логін і додати фільтр даних",
+        "zh-cn": "固定登录并添加数据点过滤器"
+      },
       "0.2.1": {
         "en": "rework login process",
         "de": "Login Prozess überarbeitet",

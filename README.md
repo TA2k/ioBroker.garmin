@@ -119,8 +119,7 @@ Alternativ von garth S3: `https://thegarth.s3.amazonaws.com/oauth_consumer.json`
 - Test-Script: `test-api.js` (SSO Login + Token Exchange + API Test)
 
 ## Changelog
-
-### **WORK IN PROGRESS**
+### 1.0.0 (2026-01-15)
 
 - fix login and add datapoint filter
 

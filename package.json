@@ -1,6 +1,6 @@
 {
   "name": "iobroker.garmin",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "Adapter for Garmin Connect",
   "author": {
     "name": "TA2k",
