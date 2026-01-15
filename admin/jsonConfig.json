@@ -92,6 +92,24 @@
         "zh-cn": "获取Adhoc和个人记录"
       }
     },
+    "_filterHeader": {
+      "type": "header",
+      "newLine": true,
+      "size": 2,
+      "text": {
+        "en": "Data Point Filter (Allowlist)",
+        "de": "Datenpunkt-Filter (Allowlist)"
+      }
+    },
+    "_filterInfo": {
+      "type": "staticText",
+      "newLine": true,
+      "sm": 12,
+      "text": {
+        "en": "Leave all fields empty to save all data points. If any filter is set, only matching data points will be saved.",
+        "de": "Alle Felder leer lassen um alle Datenpunkte zu speichern. Wenn ein Filter gesetzt ist, werden nur passende Datenpunkte gespeichert."
+      }
+    },
     "allowlistExactKeys": {
       "type": "text",
       "newLine": true,
