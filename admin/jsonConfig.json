@@ -110,14 +110,14 @@
       "type": "text",
       "newLine": true,
       "sm": 12,
-      "placeholder": "dateWeightList.bmi, hydration.valueInML",
+      "placeholder": "weight.dateweightlist.bmi, hydration.valueinml",
       "label": {
         "en": "Exact paths (comma-separated)",
         "de": "Exakte Pfade (komma-separiert)"
       },
       "help": {
-        "en": "The full path must match exactly (e.g. 'dateWeightList.bmi').",
-        "de": "Der volle Pfad muss exakt passen (z.B. 'dateWeightList.bmi')."
+        "en": "Use JSON paths WITHOUT array indices (e.g. 'weight.dateweightlist.bmi' NOT 'weight.dateweightlist01.bmi'). The '01' is added by ioBroker later.",
+        "de": "Benutze JSON-Pfade OHNE Array-Indizes (z.B. 'weight.dateweightlist.bmi' NICHT 'weight.dateweightlist01.bmi'). Die '01' wird erst von ioBroker hinzugefuegt."
       }
     },
     "allowlistSearch": {
