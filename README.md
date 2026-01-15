@@ -25,29 +25,37 @@ Der Adapter erzeugt standardmaessig viele Datenpunkte. Mit der Allowlist koennen
 
 ### Filter Typen
 
-| Typ | Beschreibung | Beispiel |
-| --- | ------------ | -------- |
-| **Exact** | Exakte Uebereinstimmung mit Key oder Pfad | `valueinml` oder `hydration.valueinml` |
-| **Search** | Teilstring-Suche in Key oder Pfad | `hydration` findet alles unter hydration |
+| Typ             | Beschreibung                                    | Beispiel                                   |
+| --------------- | ----------------------------------------------- | ------------------------------------------ |
+| **Exact Keys**  | Exakte Uebereinstimmung nur mit Feldnamen       | `bmi` findet jedes Feld namens `bmi`       |
+| **Exact Paths** | Exakte Uebereinstimmung mit vollstaendigem Pfad | `weight.dateweightlist.bmi`                |
+| **Search**      | Teilstring-Suche in Key oder Pfad               | `heart` findet `heartRate`, `restingHeart` |
 
 ### Beispiele
 
-**Nur bestimmte Felder:**
+**Nur bestimmte Feldnamen (ueberall):**
 
 ```text
-Exact: hydration.valueinml, hydration.sweatlossInML
+Exact Keys: bmi, weight, bodyfat, bonemass
+```
+
+**Nur bestimmte Pfade:**
+
+```text
+Exact Paths: weight.dateweightlist.bmi, hydration.valueinml
 ```
 
 **Alles aus einem Bereich:**
 
 ```text
-Search: hydration
+Search: heart, sleep, stress
 ```
 
 **Kombination:**
 
 ```text
-Exact: totalsteps, totaldistancemeters
+Exact Keys: bmi
+Exact Paths: hydration.valueinml
 Search: sleep
 ```
 
@@ -55,6 +63,7 @@ Search: sleep
 
 - Filter sind case-insensitive (Gross/Kleinschreibung egal)
 - Pfade werden mit Punkt getrennt: `dailysleep.dailysleepdto.sleepscores.overall.value`
+- **Wichtig**: Pfade OHNE Array-Indizes angeben (z.B. `weight.dateweightlist.bmi` NICHT `weight.dateweightlist01.bmi`). Die Indizes (`01`, `02`, ...) werden erst von ioBroker hinzugefuegt.
 - Leere Allowlist = alle Datenpunkte werden angelegt
 - Leere API-Antworten erzeugen keine Ordner
 
@@ -81,11 +90,11 @@ strings /tmp/lib/arm64-v8a/libsr.so | grep "apps.googleusercontent.com"
 # Output enthält: google_client_id,google_secret,...,oauth1_key,oauth1_secret,GARMIN_CONNECT_MOBILE_ANDROID_DI,...
 ```
 
-| Credential | Value |
-| ---------- | ----- |
-| OAuth1 Consumer Key | `fc3e99d2-118c-44b8-8ae3-03370dde24c0` |
-| OAuth1 Consumer Secret | `E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF` |
-| OAuth2 DI Client ID | `GARMIN_CONNECT_MOBILE_ANDROID_DI` |
+| Credential             | Value                                  |
+| ---------------------- | -------------------------------------- |
+| OAuth1 Consumer Key    | `fc3e99d2-118c-44b8-8ae3-03370dde24c0` |
+| OAuth1 Consumer Secret | `E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF`  |
+| OAuth2 DI Client ID    | `GARMIN_CONNECT_MOBILE_ANDROID_DI`     |
 
 Alternativ von garth S3: `https://thegarth.s3.amazonaws.com/oauth_consumer.json`
 
@@ -110,6 +119,11 @@ Alternativ von garth S3: `https://thegarth.s3.amazonaws.com/oauth_consumer.json`
 - Test-Script: `test-api.js` (SSO Login + Token Exchange + API Test)
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- fix login and add datapoint filter
+
 ### 0.2.0 (2025-03-02)
 
 - rework login process
