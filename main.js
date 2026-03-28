@@ -7,7 +7,7 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const OAuth = require('oauth-1.0a');
 const axios = require('axios').default;
 const Json2iob = require('json2iob');
@@ -19,7 +19,7 @@ const UA_IOS = 'GCM-iOS-5.7.2.1';
 const DOMAIN = 'garmin.com';
 
 // Load your modules here, e.g.:
-// const fs = require("fs");
+// const fs = require("node:fs");
 
 class Garmin extends utils.Adapter {
   /**
