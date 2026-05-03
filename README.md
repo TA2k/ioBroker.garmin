@@ -135,6 +135,8 @@ Alternativ von garth S3: `https://thegarth.s3.amazonaws.com/oauth_consumer.json`
 
 - (TA2k) initial release
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 
 MIT License
